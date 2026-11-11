@@ -1,0 +1,39 @@
+{
+  "name": "@subscriberr/server",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/cli.ts serve",
+    "build": "tsc -p tsconfig.json && node scripts/copy-migrations.mjs",
+    "typecheck": "tsc -p tsconfig.test.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@hono/node-server": "^2.1.7",
+    "@hono/zod-validator": "^0.9.1",
+    "@subscriberr/shared": "^0.1.0",
+    "archiver": "^8.0.0",
+    "better-sqlite3": "^13.1.1",
+    "croner": "^11.0.0",
+    "drizzle-orm": "^0.45.4",
+    "googleapis": "^189.0.0",
+    "hono": "^4.13.18",
+    "juice": "^12.2.3",
+    "mailparser": "^3.14.3",
+    "nodemailer": "^10.5.0",
+    "yauzl": "^3.4.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/archiver": "^8.0.0",
+    "@types/better-sqlite3": "^9.6.0",
+    "@types/mailparser": "^3.9.0",
+    "@types/node": "^22.20.5",
+    "@types/nodemailer": "^8.0.2",
+    "@types/yauzl": "^3.4.0",
+    "drizzle-kit": "^0.31.11",
+    "tsx": "^4.23.15",
+    "vitest": "^5.1.0"
+  }
+}

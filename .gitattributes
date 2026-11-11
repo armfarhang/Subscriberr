@@ -1,0 +1,5 @@
+* text=auto
+*.sh text eol=lf
+Dockerfile text eol=lf
+# Fixtures are byte-exact email samples: never normalise their line endings.
+*.eml -text

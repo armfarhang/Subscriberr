@@ -1,0 +1,113 @@
+import { mkdirSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { serve as serveHttp } from '@hono/node-server';
+import { toUtcIso } from '@subscriberr/shared';
+import { createApp } from './app.js';
+import { loadConfig, loadDotEnv } from './config.js';
+import { createLogger } from './core/logger.js';
+import { nowIso, systemClock } from './core/time.js';
+import { createSystemContext } from './core/workspace-context.js';
+import { bootDatabase } from './db/boot.js';
+import { seedDemo } from './db/seed-demo.js';
+import { Scheduler } from './modules/jobs/scheduler.js';
+import { ensureBackupDir } from './modules/system/backup-destination.js';
+import { type BackupEnv, type BackupOutcome, createBackup, getBackupRetention, recordBackupRun } from './modules/system/backup.js';
+import { registerSystemJobs } from './modules/system/jobs.js';
+import { acquireRunLock } from './modules/system/lock.js';
+import { pruneBackups } from './modules/system/prune.js';
+import { runBackupDestinationCheck } from './modules/system/status.js';
+import { APP_NAME, APP_VERSION } from './version.js';
+
+const WEB_DIR = fileURLToPath(new URL('../../web/dist', import.meta.url));
+
+/** Boot order (Spec §4.1): config → pre-migration backup → migrate → app → scheduler → listen. */
+export async function serve(): Promise<void> {
+  const baseDir = loadDotEnv();
+  const config = loadConfig(process.env, baseDir);
+  const log = createLogger(config.logLevel);
+  const clock = systemClock;
+
+  mkdirSync(config.workspacesDir, { recursive: true });
+  const lock = await acquireRunLock(config.dataDir);
+
+  const backupBase = {
+    dbFile: config.dbFile,
+    workspacesDir: config.workspacesDir,
+    dataDir: config.dataDir,
+    backupDir: config.backupDir,
+    appVersion: APP_VERSION,
+    timeZone: config.timezone,
+    clock,
+    log,
+  };
+
+  let preMigration: BackupOutcome | null = null;
+  let boot;
+  try {
+    boot = await bootDatabase({
+      dbFile: config.dbFile,
+      appVersion: APP_VERSION,
+      nowIso: nowIso(clock),
+      async beforeMigrate(db, info) {
+        log.info('taking pre-migration backup', info);
+        preMigration = await createBackup({ ...backupBase, ctx: { sqlite: db } }, 'pre_migration');
+        if (!preMigration.verified) {
+          // Safest reading of §6.0 rule 8: never migrate without a verified safety snapshot.
+          throw new Error(`Pre-migration backup failed, refusing to migrate: ${preMigration.error}`);
+        }
+      },
+    });
+  } catch (err) {
+    lock.release();
+    throw err;
+  }
+
+  const ctx = createSystemContext(boot.db);
+  const backupEnv: BackupEnv = { ...backupBase, ctx };
+  if (boot.migration.applied.length > 0) {
+    log.info('database migrated', { from: boot.migration.from, to: boot.migration.to, applied: boot.migration.applied });
+  }
+  if (preMigration) {
+    recordBackupRun(ctx, preMigration);
+    pruneBackups(ctx, { backupDir: config.backupDir, retention: getBackupRetention(ctx), timeZone: config.timezone, now: clock.now(), nowIso: toUtcIso(clock.now()) });
+  }
+
+  if (config.seedDemo) {
+    const seeded = seedDemo(boot.db, clock.now(), config.timezone);
+    if (seeded.seeded) log.info('demo workspace seeded', { accountId: seeded.accountId });
+    log.warn('DEMO MODE: fake Gmail, fake Plex/Jellyfin and fake sign-in are active. No real service is contacted.');
+  }
+
+  ensureBackupDir(config.backupDir);
+  const destination = runBackupDestinationCheck(config.backupDir, config.dataDir);
+  if (!destination.ok) log.warn('backup destination problem', { problems: destination.problems });
+
+  const scheduler = new Scheduler(ctx, clock, log);
+  registerSystemJobs(scheduler, backupEnv);
+  scheduler.start();
+
+  const app = createApp({ config, ctx, clock, log, backupEnv, scheduler, webDir: WEB_DIR });
+  const server = serveHttp({ fetch: app.fetch, port: config.port, hostname: '0.0.0.0' }, (info) => {
+    log.info(`${APP_NAME} ${APP_VERSION} listening`, { port: info.port, baseUrl: config.baseUrl, dataDir: config.dataDir, backupDir: config.backupDir });
+  });
+
+  let stopping = false;
+  const shutdown = (signal: string) => {
+    if (stopping) return;
+    stopping = true;
+    log.info('shutting down', { signal });
+    scheduler.stop();
+    const finish = () => {
+      try {
+        boot.db.close();
+      } finally {
+        lock.release();
+      }
+      process.exit(0);
+    };
+    server.close(finish);
+    setTimeout(finish, 5000).unref(); // do not hang on keep-alive connections
+  };
+  process.on('SIGINT', () => shutdown('SIGINT'));
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+}

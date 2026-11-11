@@ -1,0 +1,39 @@
+# Example deployment behind Nginx Proxy Manager (NPM). Copy to docker-compose.yml and adjust.
+#
+# In NPM, add a Proxy Host for subscriberr.mediaservers.org → http://subscriberr:3000
+# (Block common exploits on, SSL certificate + Force SSL + HTTP/2 on).
+
+services:
+  subscriberr:
+    image: subscriberr:latest
+    build: .
+    container_name: subscriberr
+    restart: unless-stopped
+    environment:
+      BASE_URL: https://subscriberr.mediaservers.org
+      TRUST_PROXY: "true"
+      GOOGLE_CLIENT_ID: "" # from Google Cloud Console
+      GOOGLE_CLIENT_SECRET: ""
+      # REQUIRED, >= 32 chars. Keep a copy in your password manager: backups do NOT include it.
+      APP_SECRET: ""
+      TZ: America/Toronto
+      PUID: "99"
+      PGID: "100"
+      # ADMIN_EMAILS: "someone@example.com"
+    volumes:
+      # Database, custom template packs, logos, import staging.
+      - /mnt/user/appdata/subscriberr:/data
+      # REQUIRED: backups. Must be a DIFFERENT share/disk than /data (not the same cache SSD).
+      - /mnt/user/backups/subscriberr:/backups
+    networks:
+      - npm
+    # No published port: NPM reaches the container over the shared network.
+    # For a quick local test without NPM, uncomment:
+    # ports:
+    #   - "3000:3000"
+
+networks:
+  npm:
+    # The user-defined Docker network your Nginx Proxy Manager container is attached to.
+    external: true
+    name: npm_default
