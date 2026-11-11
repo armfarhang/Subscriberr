@@ -1,0 +1,153 @@
+Delivered-To: recipient@example.com
+Received: by 2002:a59:8002:0:b0:558:cef6:25a0 with SMTP id p2csp372009vqg;
+        Fri, 19 Dec 2025 10:55:56 -0800 (PST)
+X-Google-Smtp-Source: REDACTED
+X-Received: by 2002:a05:6a00:1d0d:b0:7a2:7cc3:c4ed with SMTP id d2e1a72fcca58-7ff657a1052mr3850660b3a.4.1766170556674;
+        Fri, 19 Dec 2025 10:55:56 -0800 (PST)
+ARC-Seal: i=1; a=rsa-sha256; t=1766170556; cv=none;
+        d=google.com; s=arc-20240605;
+        b=HTZySU1o5SDaMMARu+DJvPjWppl5vrzIO+xni/9SmFCdUXRB3VrXf2tYmIsKknP2NY
+         NQAF42+gIc/JD4ivhSoXd3WnNa5maLwVqw5PkZIgvmoOZt2V2WVwOhiMlHvz+wNHnYqu
+         APfcMhErFtRRerXuYnbf/Y5XPzf4ZxQ5uabY4ra8T09lYxfyr601kX9RSCDOXGqKvTbX
+         0GPVeB5wAeL29iBu8eyz/Lnmhl37nBCvDpUAzzEiqTGAaCrjswNc2SlxxxjH/xvt+JaK
+         P5CE3TRTHzuTtKH+/LfYObYDpkVIZPypwOFYjFMbARWBmouncl8/7YwmcSaxXwLuEmLz
+         YPkg==
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20240605;
+        h=hdr_email_delivery_tracker:content-encoding
+         :content-transfer-encoding:mime-version:subject:message-id:to:from
+         :date:dkim-signature;
+        bh=EmbeEKvtX74kExG/TZtyfrp2o3/ZYcADnFwbx2vnc40=;
+        fh=KEKSY5Hd6Mt3VeVMS8sZWXPMb/Shaxw/bEBT60NDWsU=;
+        b=cjQhlXoN3eoD5k52BFE+THk2JcAzUTPiWFEnrOR8f7soY6HOg3H6CKAtHiJ2ScX/gd
+         IEyOsRPKOGRz7o3knIwVROYGyoEtrR2gfKw8QoDtHOZ6gEcderuD0Qtp8Iv3GJuylygX
+         REu/iKri8oWWBQgYYFMXYEM53lYQUEULibyq1pLHiCg9znLcYiPE3DweMSqh4qNHVfhi
+         O4u66+YKDQufwm/jK2xwYu+ZULEZ1ljGAx8BjkXQe2AS4cUmwfonLaVuAOEZeCYfksWj
+         tjthHQQHshYfii7CikNZLvq6GDDCEN6nVdVzgaCuKC4G7M9SLu7U/iSchV8Tgf3LP6Fk
+         hU+Q==;
+        dara=google.com
+ARC-Authentication-Results: i=1; mx.google.com;
+       dkim=pass header.i=@scotiabank.com header.s=fgk012048 header.b=YM4Y1vB1;
+       spf=pass (google.com: domain of prvs=4419c2b61=enpbb8xbounceback@scotiabank.com designates 199.166.10.108 as permitted sender) smtp.mailfrom="prvs=4419c2b61=ENPBB8XBounceBack@scotiabank.com";
+       dmarc=pass (p=REJECT sp=REJECT dis=NONE) header.from=scotiabank.com
+Return-Path: <prvs=4419c2b61=ENPBB8XBounceBack@scotiabank.com>
+Received: from rlb2.scotiabank.com (rlb2.scotiabank.com. [199.166.10.108])
+        by mx.google.com with ESMTPS id d2e1a72fcca58-7ff7d5cb697si5768700b3a.125.2025.12.19.10.55.55
+        for <recipient@example.com>
+        (version=TLS1_3 cipher=TLS_AES_256_GCM_SHA384 bits=256/256);
+        Fri, 19 Dec 2025 10:55:56 -0800 (PST)
+Received-SPF: pass (google.com: domain of prvs=4419c2b61=enpbb8xbounceback@scotiabank.com designates 199.166.10.108 as permitted sender) client-ip=199.166.10.108;
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@scotiabank.com header.s=fgk012048 header.b=YM4Y1vB1;
+       spf=pass (google.com: domain of prvs=4419c2b61=enpbb8xbounceback@scotiabank.com designates 199.166.10.108 as permitted sender) smtp.mailfrom="prvs=4419c2b61=ENPBB8XBounceBack@scotiabank.com";
+       dmarc=pass (p=REJECT sp=REJECT dis=NONE) header.from=scotiabank.com
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple;
+  d=scotiabank.com; i=@scotiabank.com; q=dns/txt;
+  s=fgk012048; t=1766170556;
+  h=date:from:to:message-id:subject:mime-version:
+   content-transfer-encoding;
+  bh=PM54iKsHl5cF0QbNMJHcmSv5+DgvRhMrTxrbwzPnzyw=;
+  b=YM4Y1vB15Y23yClag0NC74KYX6X7Bk7jhk07BUWgXNgm3ohFfRk0Yyym
+   UKuaEaF3V/SN7qZB2a8PZPE5KoEOx+FlJWtVcwVghTMy6NYwD2ZZxL7fs
+   PHpUVH5JE4yHnOmU3ef81J1mB6IRoRKFSxi0ZwvHkBs9xVttu81cjyUP9
+   hJyKmF5K0wz5Mw2GUq2lTTtjo7AO7XWvztRJevfSR5fsXpsXSva5nwMNE
+   TGiid42YSnVU+rnVFkL4ITtSRgeBcabl9hg2DmtAvS+hRFlgtFpiFdKZY
+   emB7nBIcfsb6ygdLsn536sGuqL4f/K/vf4SdnNtVvX7aDv97w7RaMgM+z
+   w==;
+X-CSE-ConnectionGUID: REDACTED
+X-CSE-MsgGUID: REDACTED
+X-ValidSender: True
+Received: from unknown (HELO sdpaplim014.100g.bns) ([10.56.39.108])
+  by iscipexbr2i1.security.bns with ESMTP; 19 Dec 2025 13:55:54 -0500
+Received: from pbb4rc1d04epjs5 ([10.112.67.159])
+	by sdpaplim014.100g.bns (8.18.1.2/8.18.1.2) with ESMTPS id 5BJItsd6185380
+	(version=TLSv1.2 cipher=ECDHE-RSA-AES256-GCM-SHA384 bits=256 verify=NOT)
+	for <recipient@example.com>; Fri, 19 Dec 2025 13:55:54 -0500
+Date: Fri, 19 Dec 2025 13:55:54 -0500 (EST)
+From: Scotia InfoAlerts <infoalerts@scotiabank.com>
+To: recipient@example.com
+Message-ID: <1819907369.3150868.1766170554530@pbb4rc1d04epjs5>
+Subject: Interac e-Transfer sent
+MIME-Version: 1.0
+Content-Type: text/html
+Content-Transfer-Encoding: 7bit
+Content-Encoding: UTF-8
+HDR_EMAIL_DELIVERY_TRACKER: REDACTED
+X-Proofpoint-Virus-Version: vendor=nai engine=6800 definitions=11647 signatures=596818
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+	<link rel="stylesheet" type="text/css" href="https://www.scotiabank.com/content/dam/scotiabank/canada/common/css/main.css">
+	<!--[if gte mso 9]>
+		<link rel="stylesheet" type="text/css" href="https://www.scotiabank.com/content/dam/scotiabank/canada/common/css/outlook.css">
+	<![endif]-->
+	<title>Interac e-Transfer sent</title>
+</head>
+<body>
+	<!--[if mso]>
+	<table cellpadding="0" cellspacing="0" border="0" style="padding:0px;margin:0px;width:100%;">
+	    <tr><td colspan="3" style="padding:0px;margin:0px;font-size:20px;height:20px;" height="20">&nbsp;</td></tr>
+	    <tr>
+	        <td style="padding:0px;margin:0px;">&nbsp;</td>
+	        <td style="padding:0px;margin:0px;" width="600">
+	<![endif]-->
+	<table cellpadding="20" cellspacing="0" border="0" id="backgroundTable" style="margin: 0;padding: 0;background-color: #ffffff;width: 100% !important;line-height: 100% !important;height: 100% !important;">
+		<tr>
+			<td align="middle" valign="top" style="border-collapse: collapse;" width="600">
+					<table id="mainTable" cellpadding="0" cellspacing="0" border="0" align="center" style="max-width: 600px; border: 1px solid #d81e05; background-color: #f4f4f4;">
+					
+						<tr style="background-color: #d81e05; color: #ffffff; height: 70px;">
+						    <td align="left" valign="middle" height="70">
+						        <img src="https://www.scotiabank.com/content/dam/scotiabank/canada/common/logos/new-scotiabank-logo-white-2x.png" width="238" height="72" alt="Scotiabank" />
+						    </td>
+						</tr>
+						
+						<tr>
+							<td align="center" style="padding-top: 20px;">
+								<table cellpadding="20" cellspacing="0" border="0" width="80%" style="margin: 20px 0 0 0; background-color: white;" id="contentTable">
+									<tr>
+										<td style="font-size: 13px; line-height: 1.5;font-family: 'Helvetica Neue', Arial, Helvetica, Geneva, sans-serif; color: #333333; background-color: #ffffff; text-align: left;">
+											<h1 style="font-weight: normal;font-size: 18px; line-height: 120%;font-family: 'Helvetica Neue', Arial, Helvetica, Geneva, sans-serif; color: #D81E05 !important; text-align: left; margin-bottom: 30px;">Hi <span id="firstName">ALEX,</span></h1>
+											
+											<p>An <i>Interac</i> e-Transfer for $500.00 was sent using account *****00*0000 at  1:55 pm ET.</p>
+					<p>If you didn't do this, call 1-800-472-6842.</p>
+					<p>See your transactions, pay bills, transfer funds, send money, and more via Scotia OnLine or Mobile Banking.</p>
+										</td>
+									</tr>
+								</table>
+							</td>
+						</tr>
+						
+			<tr>
+				<td align="center">
+					<table cellpadding="0" width="80%" style="margin-bottom: 30px;" id="disclaimer">
+						<tr>
+							<td style="font-size: 11px; line-height: 1.5;font-family: 'Helvetica Neue', Arial, Helvetica, Geneva, sans-serif; color: #333333; text-align: left;">
+								<p>You are receiving this email from The Bank of Nova Scotia  (Carrying on business as &#34;Scotiabank&#34;)</p>
+								<p>Scotiabank, 44 King Street West, Toronto, ON  M5H 1H1 <a href="http://www.scotiabank.com/contactus">www.scotiabank.com/contactus</a></p>
+								<p>To change your notification preferences or unsubscribe from InfoAlerts, sign in to Scotia OnLine. Then, go to Manage My Accounts > Alerts > Maintain Alerts.</p>
+								<p>Please do not reply to this e-mail, as it is auto-generated and you will not receive a response.</p>
+								<p>Scotiabank will never send you unsolicited emails asking for confidential information, such as your password, PIN, Access Code, credit card, or account numbers. We will never ask you to validate or restore your account access through email or pop-up windows.</p>
+							</td>
+						</tr>
+					</table>
+				</td>
+			</tr>
+		</table>
+		
+		</td>
+	</tr>
+	</table>
+	<!--[if mso]>
+	        </td>
+	        <td style="padding:0px;margin:0px;">&nbsp;</td>
+	    </tr>
+	    <tr><td colspan="3" style="padding:0px;margin:0px;font-size:20px;height:20px;" height="20">&nbsp;</td></tr>
+	</table>
+	<![endif]-->
+</body>
+</html>
