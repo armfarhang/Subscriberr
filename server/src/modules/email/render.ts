@@ -82,6 +82,11 @@ function compile(source: string, opts: { noEscape?: boolean } = {}) {
   return hb.compile(source, { strict: false, noEscape: opts.noEscape ?? false, knownHelpersOnly: true, knownHelpers: { if: true, unless: true } });
 }
 
+/** Renders a small template (announcement subject/body) with the same restricted Handlebars. */
+export function renderSnippet(source: string, vars: TemplateVars, opts: { noEscape?: boolean } = {}): string {
+  return compile(source, opts)(vars);
+}
+
 const MIME: Record<string, string> = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', svg: 'image/svg+xml' };
 
 export function renderEmail(pack: PackFiles, kind: TemplateKind, vars: TemplateVars, theme: Record<string, string>): RenderedEmail {

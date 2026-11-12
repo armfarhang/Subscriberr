@@ -5,6 +5,7 @@ import { forWorkspace, type SystemContext, type WorkspaceContext } from '../../c
 import { isInvalidGrant } from '../auth/google.js';
 import type { GmailClientFactory } from '../gmail/factory.js';
 import { markGmailDisconnected } from '../gmail/tokens.js';
+import { settleAnnouncements } from './announcements.js';
 import { buildMime, getEmailSettings, PRIORITY, sentInWindow } from './queue.js';
 
 // The drainer (Spec §9.5): every minute, per workspace, sends queued mail in priority order
@@ -140,7 +141,9 @@ export async function drainAll(ctx: SystemContext, deps: DrainDeps): Promise<Rec
   const out: Record<string, DrainResult> = {};
   for (const { account_id: id } of accounts) {
     try {
-      out[`workspace ${id}`] = await drainWorkspace(forWorkspace(ctx, id), deps);
+      const ws = forWorkspace(ctx, id);
+      out[`workspace ${id}`] = await drainWorkspace(ws, deps);
+      settleAnnouncements(ws);
     } catch (err) {
       deps.log.error('email drain failed', { accountId: id, err });
     }

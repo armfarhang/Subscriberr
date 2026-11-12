@@ -5,3 +5,4 @@ export * from './csv.js';
 export * from './payments.js';
 export * from './billing.js';
 export * from './email.js';
+export * from './announcements.js';

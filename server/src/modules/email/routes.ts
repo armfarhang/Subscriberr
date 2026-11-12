@@ -1,13 +1,14 @@
 import { Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import { zValidator } from '@hono/zod-validator';
-import { emailListQuerySchema, emailSettingsSchema, packCreateSchema, packFileWriteSchema, previewSchema, TEMPLATE_KINDS, TEMPLATE_LIMITS, themeValuesSchema } from '@subscriberr/shared';
+import { announcementDraftSchema, audienceSchema, sendAnnouncementSchema, emailListQuerySchema, emailSettingsSchema, packCreateSchema, packFileWriteSchema, previewSchema, TEMPLATE_KINDS, TEMPLATE_LIMITS, themeValuesSchema } from '@subscriberr/shared';
 import { z } from 'zod';
 import { AppError, badRequest, notFound } from '../../core/errors.js';
 import { actorOf, workspaceOf } from '../../http/middleware.js';
 import type { AppDeps, AppEnv } from '../../http/types.js';
 import { jsonBody } from '../../http/validate.js';
 import { drainWorkspace } from './drain.js';
+import { announcementRecipients, audienceRecipients, cancelAnnouncement, createAnnouncement, defaultFooter, deleteDraft, getAnnouncement, listAnnouncements, previewAnnouncement, sendAnnouncement, updateAnnouncement } from './announcements.js';
 import {
   DEFAULT_BUILTIN_DIR,
   deletePack,
@@ -181,5 +182,29 @@ export function templateRoutes(deps: AppDeps) {
     });
     return c.json({ queued: id !== null, to: account.email });
   });
+  return app;
+}
+
+/** /api/announcements — mass emails (Spec §9.4). */
+export function announcementRoutes(deps: AppDeps) {
+  const app = new Hono<AppEnv>();
+  const aDeps = () => ({ clock: deps.clock, packs: packEnvOf(deps) });
+  const annId = (raw: string | undefined) => {
+    if (!raw || !/^\d{1,15}$/.test(raw)) throw notFound('Announcement not found');
+    return Number(raw);
+  };
+  app.get('/', (c) => c.json({ items: listAnnouncements(workspaceOf(c)), footer: defaultFooter(workspaceOf(c)) }));
+  app.post('/', jsonBody(announcementDraftSchema), (c) => c.json(createAnnouncement(workspaceOf(c), deps.clock, actorOf(c), c.req.valid('json')), 201));
+  app.post('/recipients', jsonBody(z.object({ audience: audienceSchema }).strict()), (c) => c.json({ items: audienceRecipients(workspaceOf(c), deps.clock, c.req.valid('json').audience) }));
+  app.post('/preview', jsonBody(announcementDraftSchema), (c) => c.json(previewAnnouncement(workspaceOf(c), aDeps(), c.req.valid('json'))));
+  app.get('/:id', (c) => c.json(getAnnouncement(workspaceOf(c), annId(c.req.param('id')))));
+  app.put('/:id', jsonBody(announcementDraftSchema), (c) => c.json(updateAnnouncement(workspaceOf(c), deps.clock, actorOf(c), annId(c.req.param('id')), c.req.valid('json'))));
+  app.delete('/:id', (c) => {
+    deleteDraft(workspaceOf(c), deps.clock, actorOf(c), annId(c.req.param('id')));
+    return c.json({ ok: true });
+  });
+  app.get('/:id/recipients', (c) => c.json({ items: announcementRecipients(workspaceOf(c), annId(c.req.param('id'))) }));
+  app.post('/:id/send', jsonBody(sendAnnouncementSchema), (c) => c.json(sendAnnouncement(workspaceOf(c), aDeps(), actorOf(c), annId(c.req.param('id')), c.req.valid('json').confirmRecipients)));
+  app.post('/:id/cancel', (c) => c.json(cancelAnnouncement(workspaceOf(c), deps.clock, actorOf(c), annId(c.req.param('id')))));
   return app;
 }

@@ -124,5 +124,9 @@ Needs real Google sign-in (Milestone 2 checklist) with `SEED_DEMO=false`.
       have been sent (thank-yous, reminders) without sending anything. Turn it off when it looks right.
 - [ ] **M7:** customise: duplicate the default pack, add your logo (Files → Add image) and reference it as
       `<img src="assets/logo.png">`, set colours in Theme, then **Use for all emails**.
+- [ ] **M8:** send a small announcement to yourself first (audience "Hand-picked members", pick a member
+      whose email is yours), check it in your inbox, then send the real one. Each member gets their own
+      copy (no shared To/CC). A large announcement continues the next day(s) on its own; the Emails page
+      shows how much of the daily limit is used.
 - [ ] **M9:** verify Plex **empty-library revoke** behaviour and the Plex endpoints; verify
       Jellyfin policy changes.
