@@ -1,5 +1,4 @@
-import type { PAYMENT_TABS} from '@subscriberr/shared';
-import { type PaymentView } from '@subscriberr/shared';
+import { type PAYMENT_TABS, parseMoneyToCents, type PaymentView } from '@subscriberr/shared';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AlertTriangle, ChevronDown, ChevronLeft, ChevronRight, RefreshCw, Search, ShieldAlert, UserPlus } from 'lucide-react';
 import * as React from 'react';
@@ -115,7 +114,7 @@ export function PaymentsPage({ timeZone }: { timeZone: string }) {
           )}
           <ul className="space-y-2">
             {list.data?.items.map((p) => (
-              <PaymentRow key={p.id} payment={p} timeZone={timeZone} defaultOpen={tab === 'review'} />
+              <PaymentRow key={p.id} payment={p} timeZone={timeZone} defaultOpen={tab === 'review' || tab === 'awaiting'} />
             ))}
           </ul>
           {list.data && list.data.total > PAGE_SIZE && (
@@ -186,7 +185,7 @@ function RerunButton() {
 }
 
 function PaymentRow({ payment: p, timeZone, defaultOpen }: { payment: PaymentView; timeZone: string; defaultOpen: boolean }) {
-  const [open, setOpen] = React.useState(defaultOpen && p.inReview);
+  const [open, setOpen] = React.useState(defaultOpen && (p.inReview || p.status === 'pending_deposit'));
   return (
     <li className={cn('rounded-lg border bg-card', p.inReview && 'border-warning/50')}>
       <button type="button" className="flex w-full flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2.5 text-left text-sm" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
@@ -235,8 +234,114 @@ function PaymentDetail({ payment: p, timeZone }: { payment: PaymentView; timeZon
         )}
         {p.resolvedAt && <Detail label="Resolved">{`${formatDateTime(p.resolvedAt, timeZone)} by ${p.resolvedBy?.replace(/^admin:/, '')}`}</Detail>}
       </dl>
-      {(p.inReview || (p.status === 'pending_deposit' && !p.memberId)) && <ResolveActions payment={p} />}
+      {p.inReview && <ResolveActions payment={p} />}
+      {p.status === 'pending_deposit' && <DepositForm payment={p} timeZone={timeZone} />}
+      {['matched', 'underpaid', 'overpaid', 'manual'].includes(p.status) && <VoidForm payment={p} />}
+      {p.voidReason && <p className="text-sm text-muted-foreground">Voided: {p.voidReason}</p>}
     </div>
+  );
+}
+
+function useRefreshPayments() {
+  const queryClient = useQueryClient();
+  return () => {
+    void queryClient.invalidateQueries({ queryKey: queryKeys.payments });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.members });
+  };
+}
+
+/** "Mark as deposited" (§8.4): after depositing the transfer at the bank. */
+function DepositForm({ payment: p, timeZone }: { payment: PaymentView; timeZone: string }) {
+  const refresh = useRefreshPayments();
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+  const [amount, setAmount] = React.useState(p.amountCents === null ? '' : (p.amountCents / 100).toFixed(2));
+  const [date, setDate] = React.useState(today);
+  const [member, setMember] = React.useState<{ id: number; name: string } | null>(p.memberId ? { id: p.memberId, name: p.memberName ?? '' } : null);
+  const [picking, setPicking] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+  const deposit = useMutation({ mutationFn: (body: Parameters<typeof api.markDeposited>[1]) => api.markDeposited(p.id, body), onSuccess: refresh, onError: (e) => setError(e.message) });
+  const daysLeft = p.expiresOn ? Math.round((Date.parse(`${p.expiresOn}T00:00:00Z`) - Date.parse(`${today}T00:00:00Z`)) / 86_400_000) : null;
+  return (
+    <div className="space-y-3 rounded-md border bg-muted/20 p-3 text-sm">
+      {daysLeft !== null && daysLeft <= 2 && (
+        <p className="flex gap-2 text-warning">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+          {daysLeft < 0 ? `This transfer expired on ${formatDate(p.expiresOn)}.` : `Deposit it at your bank before ${formatDate(p.expiresOn)} (${daysLeft === 0 ? 'today' : `${daysLeft} day${daysLeft === 1 ? '' : 's'} left`}).`}
+        </p>
+      )}
+      <p className="text-muted-foreground">Deposited it at your bank? Record it here; it is then applied like an auto-deposit. Correct the amount if your bank shows a different one.</p>
+      <form
+        className="flex flex-wrap items-end gap-2"
+        onSubmit={(e) => {
+          e.preventDefault();
+          const cents = parseMoneyToCents(amount);
+          if (!cents || cents <= 0) return setError('Enter the deposited amount');
+          if (!member) return setError('Choose the member');
+          setError(null);
+          deposit.mutate({ amountCents: cents, date, memberId: member.id });
+        }}
+      >
+        <label className="space-y-1">
+          <span className="block text-xs text-muted-foreground">Amount</span>
+          <Input className="w-28" inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} aria-label="Deposited amount" />
+        </label>
+        <label className="space-y-1">
+          <span className="block text-xs text-muted-foreground">Deposited on</span>
+          <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} aria-label="Deposit date" />
+        </label>
+        <span className="space-y-1">
+          <span className="block text-xs text-muted-foreground">Member</span>
+          <Button type="button" variant="outline" onClick={() => setPicking((x) => !x)}>
+            {member?.name || 'Choose…'}
+          </Button>
+        </span>
+        <Button type="submit" disabled={deposit.isPending}>
+          Mark as deposited
+        </Button>
+      </form>
+      {picking && (
+        <MemberPicker
+          onPick={(id, name) => {
+            setMember({ id, name });
+            setPicking(false);
+          }}
+        />
+      )}
+      {error && <p className="text-destructive">{error}</p>}
+    </div>
+  );
+}
+
+function VoidForm({ payment: p }: { payment: PaymentView }) {
+  const refresh = useRefreshPayments();
+  const [open, setOpen] = React.useState(false);
+  const [reason, setReason] = React.useState('');
+  const voidIt = useMutation({ mutationFn: () => api.voidPayment(p.id, reason.trim()), onSuccess: refresh });
+  if (!open) {
+    return (
+      <Button size="sm" variant="ghost" className="text-destructive" onClick={() => setOpen(true)}>
+        Void payment…
+      </Button>
+    );
+  }
+  return (
+    <form
+      className="flex flex-wrap items-center gap-2 rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (reason.trim()) voidIt.mutate();
+      }}
+    >
+      <span className="w-full">Voiding reverses this payment in the member’s balance (the record is kept). Later payments are recalculated on top.</span>
+      <Input className="min-w-[14rem] flex-1" placeholder="Reason (required)" value={reason} onChange={(e) => setReason(e.target.value)} aria-label="Reason for voiding" />
+      <Button type="submit" size="sm" variant="destructive" disabled={!reason.trim() || voidIt.isPending}>
+        Void
+      </Button>
+      <Button type="button" size="sm" variant="ghost" onClick={() => setOpen(false)}>
+        Cancel
+      </Button>
+      {voidIt.isError && <span className="w-full text-destructive">{voidIt.error.message}</span>}
+    </form>
   );
 }
 

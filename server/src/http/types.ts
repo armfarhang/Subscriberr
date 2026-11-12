@@ -8,6 +8,7 @@ import type { GoogleAuthProvider } from '../modules/auth/google.js';
 import type { Scheduler } from '../modules/jobs/scheduler.js';
 import type { MediaProviderFactory } from '../modules/media/factory.js';
 import type { GmailClientFactory } from '../modules/gmail/factory.js';
+import type { BillingEvents } from '../modules/billing/ledger.js';
 import type { BackupEnv } from '../modules/system/backup.js';
 
 /** Everything the HTTP layer needs; built once in main.ts (and by tests). */
@@ -25,6 +26,8 @@ export interface AppDeps {
   media?: MediaProviderFactory;
   /** Gmail client per workspace (fake in demo mode). */
   gmail?: GmailClientFactory;
+  /** Billing events (emails in M7, media access in M9). */
+  billingEvents?: BillingEvents;
   /** Called when a payment becomes applicable (wired to billing in main.ts / tests). */
   onPaymentStored?: (ws: WorkspaceContext, paymentId: number, opts: { rescan: boolean; receivedAt: string }) => void;
   /** Directory with the built web app (web/dist). Omitted → API only. */

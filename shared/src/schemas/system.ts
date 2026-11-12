@@ -74,6 +74,8 @@ export const systemStatusSchema = z.object({
   lastBackupOkAt: z.string().nullable(),
   backupStale: z.boolean(),
   backupDestination: backupDestinationSchema,
+  /** Latest nightly integrity + ledger verification (§6.9 layer 1); null before the first run. */
+  integrity: z.object({ ok: z.boolean(), checkedAt: z.string(), problems: z.array(z.string()) }).nullable(),
 });
 export type SystemStatus = z.infer<typeof systemStatusSchema>;
 

@@ -1,4 +1,4 @@
-import { type MemberDetail, type MemberStatusAction, formatCents, type MemberStatus, type WorkspaceSettings } from '@subscriberr/shared';
+import { type MemberDetail, type MemberStatusAction, type MemberStatus, type WorkspaceSettings } from '@subscriberr/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AlertTriangle, Archive, ArrowLeft, AtSign, Check, Pause, Play, Plus, Tag, Trash2, X } from 'lucide-react';
 import * as React from 'react';
@@ -8,12 +8,13 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Field, Input, Select } from '@/components/ui/input';
 import { api, ApiRequestError } from '@/lib/api';
-import { formatDate, formatDateTime } from '@/lib/format';
+import { formatDateTime } from '@/lib/format';
 import { queryKeys } from '@/lib/query-keys';
 import { EmailAndNotesFields, focusFirstError, formFromMember, formToPayload, IdentityFields, type MemberFormErrors, type MemberFormState, PlanFields, serverErrors } from './member-form';
 import { accessStateLabel } from './server-chips';
-import { dueLabel, STATUS_LABEL, StatusBadge } from './status';
+import { STATUS_LABEL, StatusBadge } from './status';
 import { Timeline } from './timeline';
+import { BalanceCard } from '@/modules/billing/balance-card';
 import { paymentAmount, PaymentStatusBadge } from '@/modules/payments/payment-status';
 import { RulesList } from '@/modules/payments/rules-panel';
 
@@ -59,7 +60,7 @@ export function MemberDetailPage() {
           <EditForm key={m.id} member={m} settings={settings.data} />
         </div>
         <div className="space-y-6">
-          <BalanceCard member={m} />
+          <BalanceCard member={m} timeZone={settings.data.timezone} />
           <AliasesCard member={m} />
           <PaymentsCard member={m} timeZone={settings.data.timezone} />
           <MemoRuleCard member={m} />
@@ -305,34 +306,6 @@ function EditForm({ member, settings }: { member: MemberDetail; settings: Worksp
         )}
       </div>
     </form>
-  );
-}
-
-function Row({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="flex items-baseline justify-between gap-3 py-1.5 text-sm">
-      <dt className="text-muted-foreground">{label}</dt>
-      <dd className="text-right">{children}</dd>
-    </div>
-  );
-}
-
-function BalanceCard({ member: m }: { member: MemberDetail }) {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Balance</CardTitle>
-        <CardDescription>Calculated from the payment history.</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <dl className="divide-y">
-          <Row label="Paid through">{formatDate(m.paidThrough)}</Row>
-          <Row label="Due">{dueLabel(m)}</Row>
-          <Row label="Credit">{formatCents(m.creditCents, m.currency)}</Row>
-          <Row label="Last payment">{m.lastPaymentAt ? m.lastPaymentAt.slice(0, 10) : '—'}</Row>
-        </dl>
-      </CardContent>
-    </Card>
   );
 }
 

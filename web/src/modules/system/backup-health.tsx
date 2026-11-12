@@ -12,7 +12,29 @@ export function BackupWarnings({ status }: { status: SystemStatus }) {
         : 'No verified backup exists yet. Use "Back up now" on the System page, or wait for the nightly backup at 03:00.',
     );
   }
-  if (problems.length === 0) return null;
+  const integrity = status.integrity && !status.integrity.ok ? status.integrity : null;
+  if (problems.length === 0 && !integrity) return null;
+  return (
+    <div className="space-y-3">
+      {integrity && (
+        <div role="alert" className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm">
+          <div className="mb-1 flex items-center gap-2 font-semibold text-destructive">
+            <AlertTriangle className="h-4 w-4" aria-hidden /> The nightly integrity check found {integrity.problems.length} problem(s)
+          </div>
+          <p className="mb-1 text-foreground/90">Nothing was changed automatically. Restore from a backup or contact support with these details:</p>
+          <ul className="list-disc space-y-1 pl-5 font-mono text-xs text-foreground/90">
+            {integrity.problems.slice(0, 5).map((p) => (
+              <li key={p}>{p}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {problems.length > 0 && <BackupProblems problems={problems} />}
+    </div>
+  );
+}
+
+function BackupProblems({ problems }: { problems: string[] }) {
   return (
     <div role="alert" className="rounded-lg border border-warning/40 bg-warning/10 p-4 text-sm">
       <div className="mb-1 flex items-center gap-2 font-semibold text-warning">
@@ -34,6 +56,7 @@ export function BackupSummary({ status, me }: { status: SystemStatus; me: Me }) 
     ['Destination', dest.path],
     ['Free space', formatBytes(dest.freeBytes)],
     ['Separate disk from data', dest.exists ? (dest.sameFilesystemAsData ? 'No — same filesystem' : 'Yes') : 'Unknown'],
+    ['Integrity + ledger check', status.integrity ? `${status.integrity.ok ? 'OK' : `${status.integrity.problems.length} problem(s)`} · ${formatDateTime(status.integrity.checkedAt, me.timezone)}` : 'not run yet (nightly at 03:30)'],
   ];
   const healthy = dest.ok && !status.backupStale;
   return (

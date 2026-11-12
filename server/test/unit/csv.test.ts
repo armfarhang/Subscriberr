@@ -124,8 +124,8 @@ describe('ledger replay (Spec §6.5a), manual_set and void', () => {
     setCreditCents: set.credit ?? null,
   });
   it('applies absolute values in (effective_at, id) order and leaves unset parts unchanged', () => {
-    const r = replayLedger([entry(2, '2026-02-01T00:00:00Z', { credit: 500 }), entry(1, '2026-01-01T00:00:00Z', { pt: '2026-03-01' })]);
-    expect(r.final).toEqual({ paidThrough: '2026-03-01', creditCents: 500 });
+    const r = replayLedger([entry(2, '2026-02-01T00:00:00Z', { credit: 500 }), entry(1, '2026-01-01T00:00:00Z', { pt: '2026-03-01' })], 'UTC');
+    expect(r.final).toEqual({ paidThrough: '2026-03-01', creditCents: 500, lastPaymentAt: null });
     expect(r.outputs.get(1)).toMatchObject({ paidThroughBefore: null, paidThroughAfter: '2026-03-01', daysDelta: 0 });
     expect(r.outputs.get(2)).toMatchObject({ paidThroughBefore: '2026-03-01', paidThroughAfter: '2026-03-01', creditBeforeCents: 0, creditAfterCents: 500, creditDeltaCents: 500 });
   });
@@ -134,11 +134,11 @@ describe('ledger replay (Spec §6.5a), manual_set and void', () => {
       entry(1, '2026-01-01T00:00:00Z', { pt: '2026-03-01' }),
       entry(2, '2026-01-02T00:00:00Z', { pt: '2026-06-01', credit: 100 }),
       entry(3, '2026-01-03T00:00:00Z', {}, 'void', 2),
-    ]);
-    expect(r.final).toEqual({ paidThrough: '2026-03-01', creditCents: 0 });
+    ], 'UTC');
+    expect(r.final).toEqual({ paidThrough: '2026-03-01', creditCents: 0, lastPaymentAt: null });
     expect(r.outputs.get(2)).toMatchObject({ paidThroughBefore: '2026-03-01', paidThroughAfter: '2026-03-01' });
   });
-  it('refuses kinds this version cannot replay instead of guessing', () => {
-    expect(() => replayLedger([{ ...entry(1, '2026-01-01T00:00:00Z', {}), kind: 'payment' }])).toThrow(/cannot replay/);
+  it('refuses unknown kinds instead of guessing', () => {
+    expect(() => replayLedger([{ ...entry(1, '2026-01-01T00:00:00Z', {}), kind: 'bogus' as never }], 'UTC')).toThrow(/Unknown ledger entry kind/);
   });
 });

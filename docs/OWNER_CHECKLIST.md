@@ -107,7 +107,13 @@ Needs real Google sign-in (Milestone 2 checklist) with `SEED_DEMO=false`.
       redacted copy so the parser can learn it.
 
 ## Later milestones (placeholders — detailed steps are added when each lands)
-- [ ] **M6:** send a real e-Transfer and watch it flow end to end (applied, due date extended).
+- [ ] **M6 (billing):** after a real e-Transfer is matched, the member's due date moves forward by the
+      right number of periods (Member → Balance → History shows the entry). Pay a little early: the new
+      period stacks on the old due date. Send less than the plan amount: nothing extends, it is held as
+      credit, and the next payment tops it up.
+- [ ] **M6:** for an existing member, use Balance → **Set balance** to enter their current paid-through
+      date once (opening balance), instead of waiting for their next payment.
+- [ ] **M6:** System page → "Integrity + ledger check" shows OK the morning after (it runs at 03:30).
 - [ ] **M7:** check the email template in Gmail (web + mobile), Apple Mail and Outlook.
 - [ ] **M9:** verify Plex **empty-library revoke** behaviour and the Plex endpoints; verify
       Jellyfin policy changes.

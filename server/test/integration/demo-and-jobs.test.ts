@@ -9,7 +9,7 @@ import { INTERAC_SENDER } from '../../src/modules/gmail/client.js';
 import { createGmailClientFactory } from '../../src/modules/gmail/factory.js';
 import { Scheduler } from '../../src/modules/jobs/scheduler.js';
 import { createMediaProviderFactory } from '../../src/modules/media/factory.js';
-import { JOB_BACKUP, JOB_BACKUP_DESTINATION, registerSystemJobs } from '../../src/modules/system/jobs.js';
+import { JOB_BACKUP, JOB_BACKUP_DESTINATION, JOB_INTEGRITY, registerSystemJobs } from '../../src/modules/system/jobs.js';
 import { createWorld, memoryDb } from '../helpers/env.js';
 
 describe('demo seed (SEED_DEMO)', () => {
@@ -129,7 +129,7 @@ describe('scheduler (Spec §11)', () => {
     const world = createWorld();
     const scheduler = new Scheduler(world.ctx, world.clock, silentLogger);
     registerSystemJobs(scheduler, world.backupEnv);
-    expect(scheduler.names()).toEqual([JOB_BACKUP, JOB_BACKUP_DESTINATION]);
+    expect(scheduler.names()).toEqual([JOB_BACKUP, JOB_INTEGRITY, JOB_BACKUP_DESTINATION]);
 
     const backup = await scheduler.runNow(JOB_BACKUP);
     expect(backup.status).toBe('ok');

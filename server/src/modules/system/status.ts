@@ -3,6 +3,7 @@ import type { Clock } from '../../core/time.js';
 import type { SystemContext } from '../../core/workspace-context.js';
 import { currentSchemaVersion, getMeta } from '../../db/migrate.js';
 import { checkBackupDestination } from './backup-destination.js';
+import { lastIntegrityResult } from './integrity.js';
 
 /** The newest verified backup must be younger than this, or the dashboard warns (Spec §6.9). */
 export const BACKUP_STALE_AFTER_MS = 36 * 60 * 60 * 1000;
@@ -31,5 +32,6 @@ export function getSystemStatus(deps: SystemStatusDeps): SystemStatus {
     lastBackupOkAt,
     backupStale: age > BACKUP_STALE_AFTER_MS,
     backupDestination: runBackupDestinationCheck(deps.backupDir, deps.dataDir),
+    integrity: lastIntegrityResult(deps.ctx),
   };
 }
