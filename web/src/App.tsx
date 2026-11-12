@@ -14,6 +14,7 @@ import { MemberDetailPage } from '@/modules/members/member-detail-page';
 import { MembersPage } from '@/modules/members/members-page';
 import { NewMemberPage } from '@/modules/members/new-member-page';
 import { OnboardingWizard } from '@/modules/onboarding/onboarding-wizard';
+import { PaymentsPage } from '@/modules/payments/payments-page';
 import { SettingsPage } from '@/modules/settings/settings-page';
 import { SystemPage } from '@/modules/system/system-page';
 
@@ -67,6 +68,8 @@ export function App() {
         <Route path="members" element={<MembersPage />} />
         <Route path="members/new" element={<NewMemberPage />} />
         <Route path="members/:id" element={<MemberDetailPage />} />
+        <Route path="payments" element={<PaymentsPage timeZone={account.timezone} />} />
+        <Route path="review-queue" element={<Navigate to="/payments?tab=review" replace />} />
         <Route path="import-export" element={<ImportExportPage />} />
         <Route path="import-export/:id" element={<ImportWizardPage />} />
         <Route path="system" element={<SystemPage me={account} />} />

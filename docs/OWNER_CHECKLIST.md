@@ -89,8 +89,25 @@ Nothing here needs a real account; these are quick sanity checks with your own d
       Then try **Undo this import** once on a test import, within 24 hours.
 - [ ] Check the safety backup appears under System → Backups as `pre_import`.
 
+## After Milestone 5 (Gmail ingestion)
+Needs real Google sign-in (Milestone 2 checklist) with `SEED_DEMO=false`.
+- [ ] Payments → **Scan now**. The first scan reads the last 30 days (Settings → Gmail scanning).
+      Each e-Transfer notice appears once, with "Verified by Gmail (DKIM pass, DMARC pass)".
+- [ ] In Gmail, those messages carry the labels **Subscriberr/Processed** (and
+      **Subscriberr/NeedsReview** for the ones waiting for you). Nothing is deleted or archived.
+- [ ] Press Scan now again: nothing new is added (idempotent). Then System → **Rescan mailbox from
+      date** with an older date: the dry run lists only notices the app had not seen.
+- [ ] If e-Transfers arrive at another address, set it to auto-forward to this Gmail and check a
+      forwarded notice still shows "Verified by Gmail".
+- [ ] Send yourself a test e-Transfer from a second bank account (any amount): it appears within
+      ~5 minutes and matches the member whose e-Transfer name equals your bank's sender name.
+- [ ] A bank's own alert email (e.g. "Interac e-Transfer sent") never shows up as a payment.
+- [ ] Look at a **current** "sent you money" (not auto-deposit) notice if you ever get one: the
+      fixtures only include a 2017 layout. If it shows up in Review with "Unrecognized", send a
+      redacted copy so the parser can learn it.
+
 ## Later milestones (placeholders — detailed steps are added when each lands)
-- [ ] **M5/M6:** first real Gmail scan; send a real e-Transfer and watch it flow end to end.
+- [ ] **M6:** send a real e-Transfer and watch it flow end to end (applied, due date extended).
 - [ ] **M7:** check the email template in Gmail (web + mobile), Apple Mail and Outlook.
 - [ ] **M9:** verify Plex **empty-library revoke** behaviour and the Plex endpoints; verify
       Jellyfin policy changes.

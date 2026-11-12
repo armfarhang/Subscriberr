@@ -10,6 +10,7 @@ import { Field, Input } from '@/components/ui/input';
 import { api } from '@/lib/api';
 import { queryKeys } from '@/lib/query-keys';
 import { GoogleConnection } from './google-connection';
+import { ScanningCard } from './scanning-card';
 import { type FormErrors, formFromSettings, formToPatch, MemberDefaultsFields, PaymentFields, type WorkspaceFormState } from './workspace-form';
 
 function SavedNote({ show }: { show: boolean }) {
@@ -230,6 +231,7 @@ export function SettingsPage({ me, config }: { me: Me; config: PublicConfig }) {
       {settings.isPending && <div className="h-40 animate-pulse rounded-lg bg-muted" />}
       {settings.isError && <p className="text-sm text-destructive">Could not load settings: {settings.error.message}</p>}
       {settings.data && <WorkspaceSettingsForm settings={settings.data} />}
+      {settings.data && <ScanningCard settings={settings.data} />}
       {isOwner && <AllowlistCard me={me} />}
       {isOwner && <RetentionCard />}
     </div>

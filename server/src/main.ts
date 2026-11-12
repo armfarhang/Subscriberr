@@ -16,6 +16,8 @@ import { createGoogleProviderForConfig } from './modules/auth/provider-factory.j
 import { registerCsvJobs } from './modules/csv/jobs.js';
 import { Scheduler } from './modules/jobs/scheduler.js';
 import { createMediaProviderFactory } from './modules/media/factory.js';
+import { createGmailClientFactory } from './modules/gmail/factory.js';
+import { registerPaymentJobs } from './modules/payments/jobs.js';
 import { ensureBackupDir } from './modules/system/backup-destination.js';
 import { type BackupEnv, type BackupOutcome, createBackup, getBackupRetention, recordBackupRun } from './modules/system/backup.js';
 import { registerSystemJobs } from './modules/system/jobs.js';
@@ -100,10 +102,13 @@ export async function serve(): Promise<void> {
   registerSystemJobs(scheduler, backupEnv);
   registerAuthJobs(scheduler, { ctx, clock, secretBox, google, log }, config.timezone);
   registerCsvJobs(scheduler, ctx, clock, config.timezone);
+  const gmail = createGmailClientFactory(config, { ctx, secretBox });
+  const onPaymentStored = undefined;
+  registerPaymentJobs(scheduler, ctx, { clock, log, gmail, onStored: onPaymentStored }, config.timezone);
   scheduler.start();
 
   const media = createMediaProviderFactory(config);
-  const app = createApp({ config, ctx, clock, log, secretBox, google, backupEnv, scheduler, media, webDir: WEB_DIR });
+  const app = createApp({ config, ctx, clock, log, secretBox, google, backupEnv, scheduler, media, gmail, onPaymentStored, webDir: WEB_DIR });
   const server = serveHttp({ fetch: app.fetch, port: config.port, hostname: '0.0.0.0' }, (info) => {
     log.info(`${APP_NAME} ${APP_VERSION} listening`, { port: info.port, baseUrl: config.baseUrl, dataDir: config.dataDir, backupDir: config.backupDir });
   });

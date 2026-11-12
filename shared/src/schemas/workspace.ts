@@ -24,6 +24,27 @@ export const DEFAULT_MEMBER_DEFAULTS: MemberDefaults = {
   graceDays: 3,
 };
 
+/** Gmail scanning (Spec §7.1, §7.4). */
+export const scanSettingsSchema = z.object({
+  /** Minutes between automatic scans (default 5). */
+  intervalMinutes: z.number().int().min(1).max(1440),
+  /** Allowed e-Transfer notification senders (lower-case addresses). */
+  senders: z.array(z.string().trim().toLowerCase().pipe(z.email())).min(1).max(10),
+  /** Send a payment to review when a known name pays from an email not seen before (default off). */
+  reviewNewEmailForKnownName: z.boolean(),
+  /** How far back the very first scan looks, in days. Older mail: "Rescan mailbox from date". */
+  initialLookbackDays: z.number().int().min(1).max(5000),
+});
+export type ScanSettings = z.infer<typeof scanSettingsSchema>;
+
+export const DEFAULT_INTERAC_SENDER = 'notify@payments.interac.ca';
+export const DEFAULT_SCAN_SETTINGS: ScanSettings = {
+  intervalMinutes: 5,
+  senders: [DEFAULT_INTERAC_SENDER],
+  reviewNewEmailForKnownName: false,
+  initialLookbackDays: 30,
+};
+
 export const timeZoneSchema = z.string().refine(isValidTimeZone, 'Unknown timezone');
 
 const optionalEmail = z
@@ -41,6 +62,7 @@ export const workspaceSettingsSchema = z.object({
   /** Free text shown to members as {{etransfer_instructions}}. */
   etransferInstructions: z.string().max(2000),
   memberDefaults: memberDefaultsSchema,
+  scanning: scanSettingsSchema,
   onboardingCompleted: z.boolean(),
 });
 export type WorkspaceSettings = z.infer<typeof workspaceSettingsSchema>;

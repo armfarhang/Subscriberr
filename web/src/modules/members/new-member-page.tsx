@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft } from 'lucide-react';
 import * as React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { api } from '@/lib/api';
@@ -12,16 +12,30 @@ export function NewMemberPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const settings = useQuery({ queryKey: queryKeys.workspaceSettings, queryFn: api.workspaceSettings });
-  const [form, setForm] = React.useState<MemberFormState>(() => emptyMemberForm(undefined));
+  const [params] = useSearchParams();
+  // "New member from this payment" (Review Queue, §7.4 step 7): prefilled from the payment, which
+  // is assigned to the new member right after it is created.
+  const fromPayment = Number(params.get('payment')) || null;
+  const [form, setForm] = React.useState<MemberFormState>(() => ({
+    ...emptyMemberForm(undefined),
+    displayName: params.get('displayName') ?? '',
+    etransferName: params.get('etransferName') ?? '',
+    email: params.get('email') ?? '',
+  }));
   const [errors, setErrors] = React.useState<MemberFormErrors>({});
   React.useEffect(() => {
     if (settings.data) setForm((f) => ({ ...f, currency: settings.data.memberDefaults.currency }));
   }, [settings.data]);
 
   const create = useMutation({
-    mutationFn: api.createMember,
+    mutationFn: async (payload: Parameters<typeof api.createMember>[0]) => {
+      const member = await api.createMember(payload);
+      if (fromPayment) await api.resolvePayment(fromPayment, { action: 'assign', memberId: member.id, rememberSender: false });
+      return member;
+    },
     onSuccess: (member) => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.members });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.payments });
       queryClient.setQueryData(queryKeys.member(member.id), member);
       navigate(`/members/${member.id}`, { replace: true });
     },

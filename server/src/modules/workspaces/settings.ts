@@ -1,5 +1,7 @@
 import {
   DEFAULT_MEMBER_DEFAULTS,
+  DEFAULT_SCAN_SETTINGS,
+  scanSettingsSchema,
   memberDefaultsSchema,
   type MemberDefaults,
   type UpdateWorkspaceSettings,
@@ -20,6 +22,7 @@ const KEYS = {
   etransferInstructions: 'etransfer_instructions',
   memberDefaults: 'member_defaults',
   onboardingCompleted: 'onboarding_completed',
+  scanning: 'scanning',
 } as const;
 
 function readRaw(ws: WorkspaceContext): Map<string, unknown> {
@@ -41,6 +44,7 @@ export function getWorkspaceSettings(ws: WorkspaceContext): WorkspaceSettings {
     etransferEmail: parseOr(z.string().nullable(), raw.get(KEYS.etransferEmail), null),
     etransferInstructions: parseOr(z.string(), raw.get(KEYS.etransferInstructions), ''),
     memberDefaults: { ...DEFAULT_MEMBER_DEFAULTS, ...parseOr(memberDefaultsSchema.partial(), raw.get(KEYS.memberDefaults), {}) } as MemberDefaults,
+    scanning: { ...DEFAULT_SCAN_SETTINGS, ...parseOr(scanSettingsSchema.partial(), raw.get(KEYS.scanning), {}) },
     onboardingCompleted: parseOr(z.boolean(), raw.get(KEYS.onboardingCompleted), false),
   };
 }
@@ -59,6 +63,7 @@ export function updateWorkspaceSettings(ws: WorkspaceContext, clock: Clock, acto
     if (patch.etransferEmail !== undefined) put(ws, KEYS.etransferEmail, patch.etransferEmail);
     if (patch.etransferInstructions !== undefined) put(ws, KEYS.etransferInstructions, patch.etransferInstructions);
     if (patch.memberDefaults !== undefined) put(ws, KEYS.memberDefaults, patch.memberDefaults);
+    if (patch.scanning !== undefined) put(ws, KEYS.scanning, patch.scanning);
     const changed = Object.keys(patch).filter((k) => JSON.stringify(patch[k as keyof UpdateWorkspaceSettings]) !== JSON.stringify(before[k as keyof WorkspaceSettings]));
     if (changed.length > 0) writeAudit(ws, clock, { actor, action: 'settings.updated', entity: 'workspace', entityId: ws.accountId, details: { fields: changed } });
   })();

@@ -37,8 +37,8 @@ export const NAV: NavGroup[] = [
     label: 'People & money',
     items: [
       { to: '/members', label: 'Members', icon: Users, description: 'Who has access, until when, and what they owe.' },
-      { to: '/payments', label: 'Payments', icon: CreditCard, milestone: 5, description: 'Every e-Transfer the app has seen, plus transfers awaiting deposit.' },
-      { to: '/review-queue', label: 'Review queue', icon: Inbox, milestone: 5, description: 'Payments the app declined to apply automatically.' },
+      { to: '/payments', label: 'Payments', icon: CreditCard, description: 'Every e-Transfer the app has seen, plus transfers awaiting deposit.' },
+      { to: '/review-queue', label: 'Review queue', icon: Inbox, description: 'Payments the app declined to apply automatically.' },
       { to: '/import-export', label: 'Import / export', icon: ArrowLeftRight, description: 'CSV export and the side-by-side import wizard.' },
     ],
   },

@@ -41,6 +41,7 @@ describe('workspace settings and the first-run wizard (Spec §13.1)', () => {
       etransferEmail: null,
       etransferInstructions: '',
       memberDefaults: { planAmountCents: null, planPeriodDays: 30, currency: 'CAD', toleranceCents: 0, graceDays: 3 },
+      scanning: { intervalMinutes: 5, senders: ['notify@payments.interac.ca'], reviewNewEmailForKnownName: false, initialLookbackDays: 30 },
       onboardingCompleted: false,
     });
   });

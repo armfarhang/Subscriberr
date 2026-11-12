@@ -1,3 +1,4 @@
+import { RescanCard } from './rescan-card';
 import type { BackupRun, Me } from '@subscriberr/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { CheckCircle2, DatabaseBackup, XCircle } from 'lucide-react';
@@ -125,8 +126,11 @@ export function SystemPage({ me }: { me: Me }) {
             docker run --rm -v /path/to/data:/data -v /path/to/backups:/backups subscriberr restore /backups/&lt;file&gt;.zip
           </pre>
           <p className="text-muted-foreground">Then start the app again. The current data is moved aside, never deleted.</p>
+          <p className="text-muted-foreground">Afterwards, use “Rescan mailbox from date” below with the backup’s date to recover the payments received since.</p>
         </CardContent>
       </Card>
+
+      <RescanCard />
 
       {status.data && (
         <p className="text-xs text-muted-foreground">

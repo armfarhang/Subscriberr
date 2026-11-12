@@ -14,6 +14,8 @@ import { openDatabase, type Sqlite } from '../../src/db/client.js';
 import { migrate } from '../../src/db/migrate.js';
 import type { BackupEnv } from '../../src/modules/system/backup.js';
 import { createMediaProviderFactory } from '../../src/modules/media/factory.js';
+import { createGmailClientFactory, type GmailClientFactory } from '../../src/modules/gmail/factory.js';
+import type { AppDeps } from '../../src/http/types.js';
 
 export const TEST_SECRET = 'test-secret-test-secret-test-secret-0123456789';
 export const TEST_TZ = 'America/Toronto';
@@ -124,10 +126,10 @@ export function allowEmail(db: Sqlite, email: string, ownerId = 1): void {
 export const testSecretBox = () => createSecretBox(TEST_SECRET);
 
 /** The app wired like main.ts, with the in-process fake Google unless another provider is given. */
-export function testApp(world: TestWorld, options: { webDir?: string; google?: GoogleAuthProvider | null; config?: Config } = {}) {
+export function testApp(world: TestWorld, options: { webDir?: string; google?: GoogleAuthProvider | null; config?: Config; gmail?: GmailClientFactory; onPaymentStored?: AppDeps['onPaymentStored'] } = {}) {
   const config = options.config ?? world.config;
   const google = options.google === undefined ? new FakeGoogleAuthProvider(config.baseUrl, world.clock) : options.google;
   const secretBox = testSecretBox();
-  const app = createApp({ config, ctx: world.ctx, clock: world.clock, log: silentLogger, secretBox, google, backupEnv: world.backupEnv, webDir: options.webDir, media: createMediaProviderFactory(config) });
+  const app = createApp({ config, ctx: world.ctx, clock: world.clock, log: silentLogger, secretBox, google, backupEnv: world.backupEnv, webDir: options.webDir, media: createMediaProviderFactory(config), gmail: options.gmail ?? createGmailClientFactory(config), onPaymentStored: options.onPaymentStored });
   return { app, google, secretBox, config };
 }

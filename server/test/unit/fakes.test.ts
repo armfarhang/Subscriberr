@@ -39,7 +39,7 @@ describe('fake Gmail (demo mode)', () => {
   });
 
   it('is only handed out in demo mode, one inbox per workspace', async () => {
-    await expect(createGmailClientFactory({ seedDemo: false })(1)).rejects.toThrow(/not available yet/);
+    await expect(createGmailClientFactory({ seedDemo: false })(1)).rejects.toThrow(/Google is not configured/);
     const factory = createGmailClientFactory({ seedDemo: true });
     expect(await factory(1)).toBe(await factory(1));
     expect(await factory(1)).not.toBe(await factory(2));

@@ -73,6 +73,12 @@ export function seedDemo(db: Sqlite, now: Date, timeZone: string): SeedResult {
     setting.run(accountId, 'member_defaults', JSON.stringify(DEMO_MEMBER_DEFAULTS));
     setting.run(accountId, 'etransfer_email', JSON.stringify(DEMO_OWNER_EMAIL));
     setting.run(accountId, 'onboarding_completed', 'true');
+    // The fixtures span 2017–2026: let the demo's first scan read all of them.
+    setting.run(
+      accountId,
+      'scanning',
+      JSON.stringify({ intervalMinutes: 5, senders: ['notify@payments.interac.ca'], reviewNewEmailForKnownName: false, initialLookbackDays: 4000 }),
+    );
     setting.run(accountId, 'etransfer_instructions', JSON.stringify('Send an Interac e-Transfer to demo@example.com (Autodeposit is enabled).'));
 
     const server = db.prepare(

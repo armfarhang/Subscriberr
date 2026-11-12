@@ -14,6 +14,8 @@ import { EmailAndNotesFields, focusFirstError, formFromMember, formToPayload, Id
 import { accessStateLabel } from './server-chips';
 import { dueLabel, STATUS_LABEL, StatusBadge } from './status';
 import { Timeline } from './timeline';
+import { paymentAmount, PaymentStatusBadge } from '@/modules/payments/payment-status';
+import { RulesList } from '@/modules/payments/rules-panel';
 
 function useMemberCache() {
   const queryClient = useQueryClient();
@@ -59,6 +61,7 @@ export function MemberDetailPage() {
         <div className="space-y-6">
           <BalanceCard member={m} />
           <AliasesCard member={m} />
+          <PaymentsCard member={m} timeZone={settings.data.timezone} />
           <MemoRuleCard member={m} />
           <ServersCard member={m} timeZone={settings.data.timezone} />
         </div>
@@ -405,17 +408,42 @@ function MemoRuleCard({ member: m }: { member: MemberDetail }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Matching rule</CardTitle>
-        <CardDescription>Tells apart people who share an e-Transfer name.</CardDescription>
+        <CardTitle>Matching rules</CardTitle>
+        <CardDescription>
+          Tell apart people who share an e-Transfer name. A memo code (under Details) creates a rule automatically; add others here. <Link className="underline underline-offset-2" to="/payments?tab=rules">Rule tester</Link>
+        </CardDescription>
       </CardHeader>
       <CardContent className="text-sm">
-        {m.managedRule ? (
-          <p>
-            Payments from <span className="font-medium">“{m.managedRule.senderName}”</span> whose message contains <span className="font-medium">“{m.managedRule.memoValue}”</span> go to {m.displayName}. A payment without the
-            code goes to the Review Queue when the name is shared.
-          </p>
-        ) : (
-          <p className="text-muted-foreground">No memo code. Set one under Details if another member has the same e-Transfer name. Advanced rules arrive with payment matching.</p>
+        <RulesList memberId={m.id} memberName={m.displayName} />
+      </CardContent>
+    </Card>
+  );
+}
+
+function PaymentsCard({ member: m, timeZone }: { member: MemberDetail; timeZone: string }) {
+  const query = { memberId: m.id, pageSize: 20 };
+  const list = useQuery({ queryKey: queryKeys.paymentList(query), queryFn: () => api.payments(query) });
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Payments</CardTitle>
+        <CardDescription>The latest e-Transfers from this member.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        {list.data && list.data.items.length === 0 && <p className="text-sm text-muted-foreground">No payments yet.</p>}
+        <ul className="divide-y text-sm">
+          {list.data?.items.map((p) => (
+            <li key={p.id} className="flex flex-wrap items-center gap-2 py-1.5">
+              <span className="w-28 text-xs text-muted-foreground">{formatDateTime(p.receivedAt, timeZone).split(',').slice(0, 2).join(',')}</span>
+              <span className="flex-1 tabular-nums">{paymentAmount(p)}</span>
+              <PaymentStatusBadge status={p.status} />
+            </li>
+          ))}
+        </ul>
+        {list.data && list.data.total > list.data.items.length && (
+          <Link className="text-sm underline underline-offset-2" to="/payments">
+            All payments
+          </Link>
         )}
       </CardContent>
     </Card>
