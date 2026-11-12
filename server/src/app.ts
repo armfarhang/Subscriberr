@@ -14,6 +14,7 @@ import { toMe } from './modules/auth/accounts.js';
 import { allowlistRoutes } from './modules/auth/allowlist-routes.js';
 import { FakeGoogleAuthProvider, fakeGoogleRoutes } from './modules/auth/fake-google.js';
 import { authRoutes } from './modules/auth/routes.js';
+import { memberRoutes } from './modules/members/routes.js';
 import { systemRoutes } from './modules/system/routes.js';
 import { workspaceRoutes } from './modules/workspaces/routes.js';
 import { getWorkspaceSettings } from './modules/workspaces/settings.js';
@@ -95,6 +96,7 @@ export function createApp(deps: AppDeps) {
   app.use('/api/*', async (c, next) => (c.req.path === '/api/public-config' ? next() : requireAuth(c, next)));
   app.get('/api/me', (c) => c.json(toMe(c.get('account')!, getWorkspaceSettings(workspaceOf(c)).onboardingCompleted)));
   app.route('/api/workspace', workspaceRoutes(deps));
+  app.route('/api/members', memberRoutes(deps));
   app.route('/api/allowlist', allowlistRoutes(deps));
   app.route('/api/system', systemRoutes(deps));
 

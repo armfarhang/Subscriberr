@@ -3,7 +3,14 @@ import type {
   ApiError,
   BackupRetention,
   BackupRun,
+  CreateMember,
   Me,
+  MemberDetail,
+  MemberList,
+  MemberListQuery,
+  MemberStatusAction,
+  UpdateMember,
+  AddAlias,
   PublicConfig,
   SystemStatus,
   UpdateWorkspaceSettings,
@@ -71,6 +78,19 @@ export const api = {
   allowlist: () => request<{ items: AllowedAccount[] }>('/api/allowlist'),
   addAllowed: (email: string) => send<{ items: AllowedAccount[] }>('POST', '/api/allowlist', { email }),
   removeAllowed: (email: string) => send<{ items: AllowedAccount[]; sessionsEnded: number }>('DELETE', `/api/allowlist/${encodeURIComponent(email)}`),
+
+  members: (query: MemberListQuery) => {
+    const params = new URLSearchParams();
+    for (const [k, v] of Object.entries(query)) if (v !== undefined && v !== '') params.set(k, String(v));
+    return request<MemberList>(`/api/members?${params.toString()}`);
+  },
+  member: (id: number) => request<MemberDetail>(`/api/members/${id}`),
+  createMember: (body: CreateMember) => send<MemberDetail>('POST', '/api/members', body),
+  updateMember: (id: number, patch: UpdateMember) => send<MemberDetail>('PATCH', `/api/members/${id}`, patch),
+  memberStatus: (id: number, action: MemberStatusAction) => send<MemberDetail>('POST', `/api/members/${id}/status`, { action }),
+  deleteMember: (id: number) => send<{ ok: true }>('DELETE', `/api/members/${id}`),
+  addAlias: (id: number, alias: AddAlias) => send<MemberDetail>('POST', `/api/members/${id}/aliases`, alias),
+  removeAlias: (id: number, aliasId: number) => send<MemberDetail>('DELETE', `/api/members/${id}/aliases/${aliasId}`),
 
   systemStatus: () => request<SystemStatus>('/api/system/status'),
   backups: () => request<{ items: BackupRun[] }>('/api/system/backups'),

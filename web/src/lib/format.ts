@@ -26,3 +26,9 @@ export function formatAge(iso: string | null | undefined, now: Date = new Date()
   if (hours < 48) return `${hours} h ago`;
   return `${Math.round(hours / 24)} days ago`;
 }
+
+/** Calendar date "2026-11-20" → "Nov 20, 2026" (dates are already in the workspace timezone). */
+export function formatDate(date: string | null | undefined): string {
+  if (!date) return '—';
+  return new Intl.DateTimeFormat('en-CA', { dateStyle: 'medium', timeZone: 'UTC' }).format(new Date(`${date}T00:00:00Z`));
+}

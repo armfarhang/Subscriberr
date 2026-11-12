@@ -6,6 +6,8 @@ dist/
 !.env.example
 .data/
 .backups/
+.data-*/
+.backups-*/
 coverage/
 playwright-report/
 test-results/

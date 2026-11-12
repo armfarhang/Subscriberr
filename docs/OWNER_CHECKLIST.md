@@ -66,6 +66,17 @@ Everything below was tested against a fake Google; only you can try it with the 
 - [ ] A Google account **not** on the allowlist sees "This Google account is not allowed to sign in".
 - [ ] Production: repeat the first sign-in through `https://subscriberr.mediaservers.org`.
 
+## After Milestone 3 (Members)
+Nothing here needs a real account; these are quick sanity checks with your own data.
+- [ ] Add a few real members (display name + the name exactly as it appears on their
+      e-Transfers + email). Leave the plan fields empty unless someone pays a different amount.
+- [ ] Change the plan amount in Settings → Member defaults: members showing *Workspace default*
+      follow it, members marked *Custom* keep theirs.
+- [ ] If two people send e-Transfers under the same name, give each a memo code and tell them to
+      put it in the e-Transfer message. Both members should show the "shared name" warning until then.
+- [ ] Look up an old e-Transfer from someone who sometimes pays from another account or name, and
+      add that as an alias on the member.
+
 ## Later milestones (placeholders — detailed steps are added when each lands)
 - [ ] **M5/M6:** first real Gmail scan; send a real e-Transfer and watch it flow end to end.
 - [ ] **M7:** check the email template in Gmail (web + mobile), Apple Mail and Outlook.

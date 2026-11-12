@@ -28,6 +28,11 @@ export function Shell({ me, config }: { me: Me; config: PublicConfig }) {
     document.title = current ? `${current.label} · Subscriberr` : 'Subscriberr';
   }, [current]);
 
+  // A new page starts at the top (query-string changes such as list filters keep the position).
+  React.useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location.pathname]);
+
   React.useEffect(() => {
     if (!drawerOpen) return;
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setDrawerOpen(false);

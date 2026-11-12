@@ -8,6 +8,9 @@ import { api, ApiRequestError } from '@/lib/api';
 import { queryKeys } from '@/lib/query-keys';
 import { SignInPage } from '@/modules/auth/sign-in';
 import { DashboardPage } from '@/modules/dashboard/dashboard-page';
+import { MemberDetailPage } from '@/modules/members/member-detail-page';
+import { MembersPage } from '@/modules/members/members-page';
+import { NewMemberPage } from '@/modules/members/new-member-page';
 import { OnboardingWizard } from '@/modules/onboarding/onboarding-wizard';
 import { SettingsPage } from '@/modules/settings/settings-page';
 import { SystemPage } from '@/modules/system/system-page';
@@ -59,6 +62,9 @@ export function App() {
     <Routes>
       <Route element={<Shell me={account} config={config.data} />}>
         <Route index element={<DashboardPage me={account} />} />
+        <Route path="members" element={<MembersPage />} />
+        <Route path="members/new" element={<NewMemberPage />} />
+        <Route path="members/:id" element={<MemberDetailPage />} />
         <Route path="system" element={<SystemPage me={account} />} />
         <Route path="settings" element={<SettingsPage me={account} config={config.data} />} />
         {NAV_ITEMS.filter((i) => i.milestone !== undefined).map((item) => (

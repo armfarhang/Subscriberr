@@ -16,6 +16,8 @@ export interface DemoMember {
   planAmountCents?: number;
   plexUserId?: string;
   jellyfinUserId?: string;
+  /** Extra e-mail addresses this member pays from (stored normalized). */
+  emailAliases?: string[];
 }
 
 /** The first three are the payers in the e-Transfer fixtures. */
@@ -23,7 +25,7 @@ export const DEMO_MEMBERS: DemoMember[] = [
   { displayName: 'Payer One', etransferName: 'PAYER ONE', email: 'payer1@example.com', planAmountCents: 1000, plexUserId: 'plex-101', jellyfinUserId: 'jf-101' },
   { displayName: 'Pat (cousin)', etransferName: 'Pat', email: 'payer2@example.com', plexUserId: 'plex-102' },
   { displayName: 'Sam Payer', etransferName: 'Sam Payer', email: 'payer3@example.com', jellyfinUserId: 'jf-103' },
-  { displayName: 'Jordan Example', etransferName: 'JORDAN EXAMPLE', email: 'jordan@example.com', plexUserId: 'plex-104', jellyfinUserId: 'jf-104' },
+  { displayName: 'Jordan Example', etransferName: 'JORDAN EXAMPLE', email: 'jordan@example.com', plexUserId: 'plex-104', jellyfinUserId: 'jf-104', emailAliases: ['jordan.work@example.com'] },
   { displayName: 'Riley (no email yet)', etransferName: 'Riley Sample', email: null, notes: 'Demo member without an email on file.' },
 ];
 
@@ -78,12 +80,14 @@ export function seedDemo(db: Sqlite, now: Date, timeZone: string): SeedResult {
       `INSERT INTO member_server_accounts (account_id, member_id, server_id, external_user_id, external_username)
        VALUES (?, ?, ?, ?, ?)`,
     );
+    const alias = db.prepare(`INSERT INTO member_aliases (account_id, member_id, kind, value, source, created_at) VALUES (?, ?, 'email', ?, 'manual', ?)`);
     for (const m of DEMO_MEMBERS) {
       const memberId = Number(
         member.run(accountId, m.displayName, m.etransferName, m.email, m.notes ?? null, m.planAmountCents ?? null, at, at).lastInsertRowid,
       );
       if (m.plexUserId) link.run(accountId, memberId, plexId, m.plexUserId, m.displayName);
       if (m.jellyfinUserId) link.run(accountId, memberId, jellyfinId, m.jellyfinUserId, m.displayName);
+      for (const a of m.emailAliases ?? []) alias.run(accountId, memberId, a.toLowerCase(), at);
     }
 
     db.prepare(`INSERT INTO audit_log (account_id, at, actor, action, entity, details) VALUES (?, ?, 'system', 'demo.seeded', 'workspace', ?)`).run(
