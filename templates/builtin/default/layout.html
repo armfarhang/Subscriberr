@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="supported-color-schemes" content="light dark">
+<title>{{subject}}</title>
+<style>
+  body { margin: 0; padding: 0; background: {{theme.background_color}}; color: {{theme.text_color}}; font-family: {{{theme.font_stack}}}; -webkit-text-size-adjust: 100%; }
+  .wrap { width: 100%; background: {{theme.background_color}}; padding: 24px 0; }
+  .card { width: 600px; max-width: 600px; background: {{theme.card_color}}; border-radius: {{theme.radius}}px; overflow: hidden; }
+  .band { background: {{theme.header_color}}; color: #ffffff; padding: 20px 32px; font-size: 16px; font-weight: 700; letter-spacing: 0.2px; }
+  .band .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: {{theme.accent_color}}; margin-right: 8px; }
+  .body { padding: 28px 32px 8px 32px; font-size: 15px; line-height: 1.6; color: {{theme.text_color}}; }
+  h1 { font-size: 22px; line-height: 1.3; margin: 0 0 12px 0; color: {{theme.text_color}}; }
+  p { margin: 0 0 14px 0; }
+  .facts { width: 100%; border-radius: 10px; background: {{theme.background_color}}; margin: 8px 0 18px 0; }
+  .facts td { padding: 10px 16px; font-size: 14px; }
+  .facts .label { color: {{theme.muted_color}}; }
+  .facts .value { text-align: right; font-weight: 600; }
+  .good { color: {{theme.success_color}}; }
+  .warn { color: {{theme.warning_color}}; }
+  .button { display: inline-block; background: {{theme.button_color}}; color: #ffffff !important; text-decoration: none; padding: 12px 22px; border-radius: 10px; font-weight: 600; }
+  .note { font-size: 13px; color: {{theme.muted_color}}; }
+  .foot { padding: 18px 32px 26px 32px; font-size: 12px; line-height: 1.5; color: {{theme.muted_color}}; }
+  @media only screen and (max-width: 620px) {
+    .card { width: 100% !important; border-radius: 0 !important; }
+    .body, .band, .foot { padding-left: 20px !important; padding-right: 20px !important; }
+  }
+  @media (prefers-color-scheme: dark) {
+    body, .wrap { background: #0f1117 !important; }
+    .card { background: #191c26 !important; }
+    .body, h1, .facts .value { color: #e7e9f1 !important; }
+    .facts { background: #11141c !important; }
+    .facts .label, .note, .foot { color: #9aa0b4 !important; }
+  }
+</style>
+</head>
+<body>
+  <table role="presentation" class="wrap" width="100%" cellpadding="0" cellspacing="0" border="0">
+    <tr>
+      <td align="center">
+        <table role="presentation" class="card" width="600" cellpadding="0" cellspacing="0" border="0">
+          <tr><td class="band"><span class="dot"></span>{{theme.header_text}}</td></tr>
+          <tr><td class="body">{{{content}}}</td></tr>
+          <tr>
+            <td class="foot">
+              {{#if etransfer_email}}Pay by Interac e-Transfer to <strong>{{etransfer_email}}</strong>{{#if payment_memo_code}} with the message <strong>{{payment_memo_code}}</strong>{{/if}}.<br>{{/if}}
+              {{#if etransfer_instructions}}{{etransfer_instructions}}<br>{{/if}}
+              {{theme.footer_text}}
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

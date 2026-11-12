@@ -1,0 +1,29 @@
+{
+  "name": "Subscriberr Default",
+  "version": "1.0.0",
+  "author": "Subscriberr",
+  "description": "A modern single-column card with a dark header band, a key-facts block and dark-mode support.",
+  "subjects": {
+    "thanks": "Thanks {{member.display_name}}, you're paid through {{paid_through}}",
+    "deficit": "We received {{amount_received}}, {{shortfall}} short",
+    "reminder": "{{#if days_until_due}}Your payment is due in {{days_until_due}} day(s){{else}}Your payment is due{{/if}}",
+    "expired": "Your access has been paused",
+    "announcement": "{{subject}}"
+  },
+  "theme": {
+    "accent_color": { "label": "Accent", "type": "color", "default": "#6d5efc" },
+    "header_color": { "label": "Header band", "type": "color", "default": "#14161f" },
+    "background_color": { "label": "Page background", "type": "color", "default": "#eef0f5" },
+    "card_color": { "label": "Card", "type": "color", "default": "#ffffff" },
+    "text_color": { "label": "Text", "type": "color", "default": "#1c2033" },
+    "muted_color": { "label": "Muted text", "type": "color", "default": "#5d6478" },
+    "success_color": { "label": "Success", "type": "color", "default": "#1f9d68" },
+    "warning_color": { "label": "Warning", "type": "color", "default": "#c77c0e" },
+    "button_color": { "label": "Button", "type": "color", "default": "#6d5efc" },
+    "radius": { "label": "Corner radius (px)", "type": "number", "default": "14" },
+    "font_stack": { "label": "Font stack", "type": "text", "default": "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" },
+    "header_text": { "label": "Header text", "type": "text", "default": "Subscriberr" },
+    "footer_text": { "label": "Footer text", "type": "text", "default": "You receive this because you share a media server with us. Reply to this email with any question." }
+  },
+  "sample": {}
+}

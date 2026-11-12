@@ -21,6 +21,15 @@ import type {
   ImportRowView,
   MappingPreset,
   MatchingRuleView,
+  EmailPreview,
+  EmailQueueItem,
+  EmailQueueStatus,
+  EmailSettings,
+  PackDetail,
+  PackProblem,
+  PackSummary,
+  PreviewRequest,
+  TemplateKind,
   BalanceAdjust,
   BalanceSet,
   LedgerEntryView,
@@ -162,6 +171,39 @@ export const api = {
   ledger: (memberId: number) => request<{ items: LedgerEntryView[] }>(`/api/billing/members/${memberId}/ledger`),
   adjustBalance: (memberId: number, body: BalanceAdjust) => send<MemberDetail>('POST', `/api/billing/members/${memberId}/adjust`, body),
   setBalance: (memberId: number, body: BalanceSet) => send<MemberDetail>('POST', `/api/billing/members/${memberId}/set`, body),
+  emailSettings: () => request<EmailSettings>('/api/email/settings'),
+  saveEmailSettings: (body: EmailSettings) => send<EmailSettings>('PUT', '/api/email/settings', body),
+  emailStatus: () => request<EmailQueueStatus>('/api/email/status'),
+  emailQueue: (q: { status?: string; kind?: string; page?: number }) => {
+    const params = new URLSearchParams();
+    for (const [k, v] of Object.entries(q)) if (v !== undefined && v !== '') params.set(k, String(v));
+    return request<{ items: EmailQueueItem[]; total: number; page: number; pageSize: number }>(`/api/email/queue?${params.toString()}`);
+  },
+  emailItem: (id: number) => request<EmailQueueItem & { html: string; text: string }>(`/api/email/queue/${id}`),
+  retryEmail: (id: number) => send<{ ok: true }>('POST', `/api/email/queue/${id}/retry`),
+  cancelEmail: (id: number) => send<{ ok: true }>('POST', `/api/email/queue/${id}/cancel`),
+  drainNow: () => send<{ sent: number; failed: number; retried: number; dryRun: number; skipped?: string }>('POST', '/api/email/drain'),
+  packs: () => request<{ items: PackSummary[] }>('/api/templates'),
+  pack: (id: string) => request<PackDetail>(`/api/templates/${id}`),
+  packFile: (id: string, path: string) => request<{ content: string }>(`/api/templates/${id}/file?path=${encodeURIComponent(path)}`),
+  savePackFile: (id: string, path: string, content: string) => send<PackDetail>('PUT', `/api/templates/${id}/file`, { path, content }),
+  deletePackFile: (id: string, path: string) => request<PackDetail>(`/api/templates/${id}/file?path=${encodeURIComponent(path)}`, { method: 'DELETE' }),
+  duplicatePack: (fromPackId: string, name: string) => send<PackDetail>('POST', '/api/templates', { fromPackId, name }),
+  deletePack: (id: string) => send<{ ok: true }>('DELETE', `/api/templates/${id}`),
+  activatePack: (id: string) => send<{ ok: true }>('POST', `/api/templates/${id}/activate`),
+  savePackTheme: (id: string, values: Record<string, string>) => send<PackDetail>('PUT', `/api/templates/${id}/theme`, { values }),
+  previewPack: (body: PreviewRequest) => send<EmailPreview & { problems: PackProblem[] }>('POST', '/api/templates/preview', body),
+  testPack: (id: string, kind: TemplateKind) => send<{ queued: boolean; to: string }>('POST', `/api/templates/${id}/test`, { kind }),
+  uploadPack: (file: File) => {
+    const body = new FormData();
+    body.append('file', file);
+    return request<PackDetail>('/api/templates/upload', { method: 'POST', body });
+  },
+  uploadPackAsset: (id: string, file: File) => {
+    const body = new FormData();
+    body.append('file', file);
+    return request<PackDetail>(`/api/templates/${id}/assets`, { method: 'POST', body });
+  },
   mappingPresets: () => request<{ items: MappingPreset[] }>('/api/csv/presets'),
   saveMappingPresets: (items: MappingPreset[]) => send<{ items: MappingPreset[] }>('PUT', '/api/csv/presets', { items }),
 

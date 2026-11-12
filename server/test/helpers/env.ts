@@ -17,6 +17,7 @@ import { createMediaProviderFactory } from '../../src/modules/media/factory.js';
 import { createGmailClientFactory, type GmailClientFactory } from '../../src/modules/gmail/factory.js';
 import type { AppDeps } from '../../src/http/types.js';
 import { createServices } from '../../src/wiring.js';
+import { DEFAULT_BUILTIN_DIR } from '../../src/modules/email/packs.js';
 
 export const TEST_SECRET = 'test-secret-test-secret-test-secret-0123456789';
 export const TEST_TZ = 'America/Toronto';
@@ -131,7 +132,8 @@ export function testApp(world: TestWorld, options: { webDir?: string; google?: G
   const config = options.config ?? world.config;
   const google = options.google === undefined ? new FakeGoogleAuthProvider(config.baseUrl, world.clock) : options.google;
   const secretBox = testSecretBox();
-  const services = createServices({ clock: world.clock, log: silentLogger });
-  const app = createApp({ config, ctx: world.ctx, clock: world.clock, log: silentLogger, secretBox, google, backupEnv: world.backupEnv, webDir: options.webDir, media: createMediaProviderFactory(config), gmail: options.gmail ?? createGmailClientFactory(config), onPaymentStored: options.onPaymentStored ?? services.onPaymentStored, billingEvents: services.billingEvents });
+  const packs = { builtinDir: DEFAULT_BUILTIN_DIR, workspacesDir: world.workspacesDir };
+  const services = createServices({ clock: world.clock, log: silentLogger, packs });
+  const app = createApp({ config, ctx: world.ctx, clock: world.clock, log: silentLogger, secretBox, google, backupEnv: world.backupEnv, webDir: options.webDir, media: createMediaProviderFactory(config), gmail: options.gmail ?? createGmailClientFactory(config), onPaymentStored: options.onPaymentStored ?? services.onPaymentStored, billingEvents: services.billingEvents, packs, emailThrottleMs: 0 });
   return { app, google, secretBox, config, services };
 }

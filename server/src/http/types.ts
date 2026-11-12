@@ -9,6 +9,7 @@ import type { Scheduler } from '../modules/jobs/scheduler.js';
 import type { MediaProviderFactory } from '../modules/media/factory.js';
 import type { GmailClientFactory } from '../modules/gmail/factory.js';
 import type { BillingEvents } from '../modules/billing/ledger.js';
+import type { PackEnv } from '../modules/email/packs.js';
 import type { BackupEnv } from '../modules/system/backup.js';
 
 /** Everything the HTTP layer needs; built once in main.ts (and by tests). */
@@ -28,6 +29,10 @@ export interface AppDeps {
   gmail?: GmailClientFactory;
   /** Billing events (emails in M7, media access in M9). */
   billingEvents?: BillingEvents;
+  /** Where template packs live (defaults: templates/builtin + the data volume). */
+  packs?: PackEnv;
+  /** Pause between sent emails (tests use 0). */
+  emailThrottleMs?: number;
   /** Called when a payment becomes applicable (wired to billing in main.ts / tests). */
   onPaymentStored?: (ws: WorkspaceContext, paymentId: number, opts: { rescan: boolean; receivedAt: string }) => void;
   /** Directory with the built web app (web/dist). Omitted → API only. */

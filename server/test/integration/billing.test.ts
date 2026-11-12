@@ -9,6 +9,7 @@ import { FakeGmail } from '../../src/modules/gmail/fake.js';
 import { runDaily } from '../../src/modules/jobs/daily.js';
 import { runIntegrityCheck } from '../../src/modules/system/integrity.js';
 import { createServices } from '../../src/wiring.js';
+import { DEFAULT_BUILTIN_DIR } from '../../src/modules/email/packs.js';
 import { createWorld, insertAccount, testApp } from '../helpers/env.js';
 import { CSRF, cookieFrom } from '../helpers/http.js';
 
@@ -115,7 +116,7 @@ describe('manual billing actions', () => {
          VALUES (1, 4, 1500, '2026-11-01T00:00:00Z', 'JORDAN EXAMPLE', 'awaiting_deposit', '2026-11-11', 'pending_deposit', 'gmail', '2026-11-01T00:00:00Z')`,
       )
       .run();
-    const services = createServices({ clock: world.clock, log: silentLogger });
+    const services = createServices({ clock: world.clock, log: silentLogger, packs: { builtinDir: DEFAULT_BUILTIN_DIR, workspacesDir: world.workspacesDir } });
     world.clock.set('2026-11-12T14:30:00Z'); // 09:30 in Toronto
     const out = await runDaily(world.ctx, world.clock, silentLogger, services.dailySteps);
     expect(out['workspace 1']).toMatchObject({ 'expire-pending-deposits': { expired: 1 } });
@@ -129,7 +130,7 @@ describe('manual billing actions', () => {
     const { json, member, world } = await setup('2026-11-30T15:00:00Z');
     await json('/api/billing/members/1/set', { method: 'POST', body: { paidThrough: '2026-11-30', note: 'test' } });
     expect((await member(1)).status).toBe('active');
-    const services = createServices({ clock: world.clock, log: silentLogger });
+    const services = createServices({ clock: world.clock, log: silentLogger, packs: { builtinDir: DEFAULT_BUILTIN_DIR, workspacesDir: world.workspacesDir } });
     const statusOn = async (instant: string) => {
       world.clock.set(instant);
       await runDaily(world.ctx, world.clock, silentLogger, services.dailySteps);

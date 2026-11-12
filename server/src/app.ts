@@ -18,6 +18,7 @@ import { csvRoutes } from './modules/csv/routes.js';
 import { memberRoutes } from './modules/members/routes.js';
 import { paymentRoutes } from './modules/payments/routes.js';
 import { billingRoutes } from './modules/billing/routes.js';
+import { emailRoutes, templateRoutes } from './modules/email/routes.js';
 import { systemRoutes } from './modules/system/routes.js';
 import { workspaceRoutes } from './modules/workspaces/routes.js';
 import { getWorkspaceSettings } from './modules/workspaces/settings.js';
@@ -103,6 +104,8 @@ export function createApp(deps: AppDeps) {
   app.route('/api/csv', csvRoutes(deps));
   app.route('/api/payments', paymentRoutes(deps));
   app.route('/api/billing', billingRoutes(deps));
+  app.route('/api/email', emailRoutes(deps));
+  app.route('/api/templates', templateRoutes(deps));
   app.route('/api/allowlist', allowlistRoutes(deps));
   app.route('/api/system', systemRoutes(deps));
 

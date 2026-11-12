@@ -1,0 +1,8 @@
+<h1>{{#if days_until_due}}Your payment is due in {{days_until_due}} day(s){{else}}Your payment is due{{/if}}</h1>
+<p>Hi {{member.display_name}}, a friendly reminder that your access is paid through <strong class="warn">{{due_date}}</strong>.</p>
+<table role="presentation" class="facts" cellpadding="0" cellspacing="0" border="0">
+  <tr><td class="label">Amount</td><td class="value">{{amount_expected}}</td></tr>
+  <tr><td class="label">Due</td><td class="value warn">{{due_date}}</td></tr>
+  {{#if credit}}<tr><td class="label">Your credit</td><td class="value">{{credit}}</td></tr>{{/if}}
+</table>
+<p class="note">Access continues for {{grace_days}} day(s) after the due date. Already paid? Thank you, and please ignore this message.</p>

@@ -1,0 +1,20 @@
+{
+  "name": "Minimal",
+  "version": "1.0.0",
+  "author": "Subscriberr",
+  "description": "Plain, text-like emails with no images or colours beyond a link colour.",
+  "subjects": {
+    "thanks": "Payment received, paid through {{paid_through}}",
+    "deficit": "Payment received: {{shortfall}} still needed",
+    "reminder": "Payment due {{due_date}}",
+    "expired": "Access paused",
+    "announcement": "{{subject}}"
+  },
+  "theme": {
+    "text_color": { "label": "Text", "type": "color", "default": "#222222" },
+    "link_color": { "label": "Links", "type": "color", "default": "#3b5bdb" },
+    "font_stack": { "label": "Font stack", "type": "text", "default": "Georgia, 'Times New Roman', serif" },
+    "footer_text": { "label": "Footer text", "type": "text", "default": "Reply to this email with any question." }
+  },
+  "sample": {}
+}

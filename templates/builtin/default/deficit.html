@@ -1,0 +1,9 @@
+<h1>Almost there, {{member.display_name}}</h1>
+<p>We received <strong>{{amount_received}}</strong>, but your plan is <strong>{{amount_expected}}</strong>. We're holding what you sent as credit; your access is not extended yet.</p>
+<table role="presentation" class="facts" cellpadding="0" cellspacing="0" border="0">
+  <tr><td class="label">Received</td><td class="value">{{amount_received}}</td></tr>
+  <tr><td class="label">Expected</td><td class="value">{{amount_expected}}</td></tr>
+  <tr><td class="label">Still needed</td><td class="value warn">{{shortfall}}</td></tr>
+  <tr><td class="label">Paid through</td><td class="value">{{#if paid_through}}{{paid_through}}{{else}}—{{/if}}</td></tr>
+</table>
+<p>Send the remaining <strong>{{shortfall}}</strong> and it will be applied automatically together with your credit.</p>

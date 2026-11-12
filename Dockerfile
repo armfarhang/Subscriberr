@@ -47,6 +47,8 @@ COPY --from=build /app/shared/dist shared/dist
 COPY --from=build /app/server/package.json server/package.json
 COPY --from=build /app/server/dist server/dist
 COPY --from=build /app/web/dist web/dist
+COPY templates templates
+COPY fixtures fixtures
 COPY docker/entrypoint.sh /usr/local/bin/subscriberr-entrypoint
 RUN chmod 0755 /usr/local/bin/subscriberr-entrypoint
 

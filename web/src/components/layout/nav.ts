@@ -45,8 +45,8 @@ export const NAV: NavGroup[] = [
   {
     label: 'Email',
     items: [
-      { to: '/emails', label: 'Emails', icon: Mail, milestone: 7, description: 'The outbound queue: reminders, confirmations and deficit notices.' },
-      { to: '/templates', label: 'Templates', icon: Palette, milestone: 7, description: 'Template packs, the editor and live preview.' },
+      { to: '/emails', label: 'Emails', icon: Mail, description: 'The outbound queue: reminders, confirmations and deficit notices.' },
+      { to: '/templates', label: 'Templates', icon: Palette, description: 'Template packs, the editor and live preview.' },
       { to: '/announcements', label: 'Announcements', icon: Megaphone, milestone: 8, description: 'Mass emails to chosen audiences.' },
     ],
   },

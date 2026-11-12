@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>{{subject}}</title>
+<style>
+  body { margin: 0; padding: 24px; font-family: {{{theme.font_stack}}}; font-size: 16px; line-height: 1.6; color: {{theme.text_color}}; }
+  .page { max-width: 560px; }
+  a { color: {{theme.link_color}}; }
+  .foot { margin-top: 28px; font-size: 13px; color: #777777; }
+</style>
+</head>
+<body>
+  <div class="page">
+    {{{content}}}
+    <p class="foot">
+      {{#if etransfer_email}}Pay by Interac e-Transfer to {{etransfer_email}}{{#if payment_memo_code}} with the message "{{payment_memo_code}}"{{/if}}.<br>{{/if}}
+      {{theme.footer_text}}
+    </p>
+  </div>
+</body>
+</html>

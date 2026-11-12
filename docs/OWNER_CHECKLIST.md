@@ -114,6 +114,15 @@ Needs real Google sign-in (Milestone 2 checklist) with `SEED_DEMO=false`.
 - [ ] **M6:** for an existing member, use Balance → **Set balance** to enter their current paid-through
       date once (opening balance), instead of waiting for their next payment.
 - [ ] **M6:** System page → "Integrity + ledger check" shows OK the morning after (it runs at 03:30).
-- [ ] **M7:** check the email template in Gmail (web + mobile), Apple Mail and Outlook.
+- [ ] **M7:** Templates → **Send test to me** for each kind (thank-you, deficit, reminder, access paused,
+      announcement). Check them in **Gmail web**, the **Gmail app** (iOS/Android), **Apple Mail** and
+      **Outlook**, in light and dark mode. Report anything broken (layout, colours, images).
+- [ ] **M7:** Emails → set your **From name** (e.g. your server's name). Send a test and confirm the sender
+      shows as "Name <your Gmail>" and that replies come to your Gmail.
+- [ ] **M7:** the test emails appear in Gmail's **Sent** folder (they are real messages from your account).
+- [ ] **M7:** optionally turn on **Dry run** for the first day after go-live: the Emails page lists what would
+      have been sent (thank-yous, reminders) without sending anything. Turn it off when it looks right.
+- [ ] **M7:** customise: duplicate the default pack, add your logo (Files → Add image) and reference it as
+      `<img src="assets/logo.png">`, set colours in Theme, then **Use for all emails**.
 - [ ] **M9:** verify Plex **empty-library revoke** behaviour and the Plex endpoints; verify
       Jellyfin policy changes.
