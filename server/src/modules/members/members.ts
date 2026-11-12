@@ -31,7 +31,7 @@ import { memberWarnings } from './warnings.js';
 // (paid_through, credit_cents, last_payment_at) are caches of the billing ledger and are never
 // written here (§6.5a); status is written here only for the manual transitions of §8.3.
 
-interface MemberRow {
+export interface MemberRow {
   id: number;
   display_name: string;
   etransfer_name: string | null;
@@ -190,20 +190,20 @@ export function getMemberDetail(ws: WorkspaceContext, clock: Clock, id: number):
 
 const STATUS_ORDER: Record<MemberStatus, number> = { active: 0, grace: 1, expired: 2, paused: 3, archived: 4 };
 
-/**
- * Search / filter / sort / paginate. A workspace has at most a few hundred members, so the
- * filtering runs in memory, which also makes the search diacritic- and case-insensitive.
- */
-export function listMembers(ws: WorkspaceContext, clock: Clock, rawQuery: MemberListQuery = {}): MemberList {
+/** Every member row of the workspace (for CSV export and import matching). */
+export function allMemberRows(ws: WorkspaceContext): MemberRow[] {
+  return ws.sqlite.prepare(`${SELECT_MEMBER} WHERE account_id = ?`).all(ws.accountId) as MemberRow[];
+}
+
+export function getMemberRow(ws: WorkspaceContext, id: number): MemberRow | undefined {
+  return findRow(ws, id);
+}
+
+/** Filter + search + sort, shared by the list API and the CSV export (which respects the same filters). */
+export function selectMembers(ws: WorkspaceContext, rawQuery: MemberListQuery = {}): { rows: MemberRow[]; all: MemberRow[] } {
   const query = memberListQuerySchema.parse(rawQuery);
-  const settings = getWorkspaceSettings(ws);
-  const todayDate = today(clock, settings.timezone);
-  const rows = ws.sqlite.prepare(`${SELECT_MEMBER} WHERE account_id = ?`).all(ws.accountId) as MemberRow[];
-
-  const counts = Object.fromEntries(MEMBER_STATUSES.map((s) => [s, 0])) as MemberList['counts'];
-  for (const r of rows) counts[r.status]++;
-
-  let selected = rows.filter((r) => (query.status === 'all' ? true : query.status === 'current' ? r.status !== 'archived' : r.status === query.status));
+  const all = allMemberRows(ws);
+  let selected = all.filter((r) => (query.status === 'all' ? true : query.status === 'current' ? r.status !== 'archived' : r.status === query.status));
 
   const needle = query.q ? normalizeName(query.q) : '';
   if (needle) {
@@ -233,6 +233,20 @@ export function listMembers(ws: WorkspaceContext, clock: Clock, rawQuery: Member
         return sign * byName(a, b);
     }
   });
+  return { rows: selected, all };
+}
+
+/**
+ * Search / filter / sort / paginate. A workspace has at most a few hundred members, so the
+ * filtering runs in memory, which also makes the search diacritic- and case-insensitive.
+ */
+export function listMembers(ws: WorkspaceContext, clock: Clock, rawQuery: MemberListQuery = {}): MemberList {
+  const query = memberListQuerySchema.parse(rawQuery);
+  const settings = getWorkspaceSettings(ws);
+  const todayDate = today(clock, settings.timezone);
+  const { rows: selected, all } = selectMembers(ws, query);
+  const counts = Object.fromEntries(MEMBER_STATUSES.map((s) => [s, 0])) as MemberList['counts'];
+  for (const r of all) counts[r.status]++;
 
   const total = selected.length;
   const start = (query.page - 1) * query.pageSize;
@@ -259,7 +273,14 @@ function assertMemoCodeFree(ws: WorkspaceContext, code: string | null | undefine
   }
 }
 
-export function createMember(ws: WorkspaceContext, clock: Clock, actor: string, input: CreateMember): MemberDetail {
+/** Extra context for writes made by another module (the CSV import). */
+export interface MemberWriteOptions {
+  /** Recorded on the member (`import_batch_id`) and in the audit details. */
+  importBatchId?: number;
+}
+
+/** Inserts a member (no detail view). Runs in its own transaction / savepoint. */
+export function insertMember(ws: WorkspaceContext, clock: Clock, actor: string, input: CreateMember, opts: MemberWriteOptions = {}): number {
   assertMemoCodeFree(ws, input.paymentMemoCode, null);
   const defaults = getWorkspaceSettings(ws).memberDefaults;
   const at = nowIso(clock);
@@ -279,20 +300,29 @@ export function createMember(ws: WorkspaceContext, clock: Clock, actor: string, 
     emailsEnabled: input.emailsEnabled ?? true,
   };
   const fields = Object.keys(COLUMNS) as Field[];
-  const id = ws.sqlite.transaction(() => {
+  return ws.sqlite.transaction(() => {
     const newId = Number(
       ws.sqlite
         .prepare(
-          `INSERT INTO members (account_id, ${fields.map((f) => COLUMNS[f]).join(', ')}, created_at, updated_at)
-           VALUES (?, ${fields.map(() => '?').join(', ')}, ?, ?)`,
+          `INSERT INTO members (account_id, ${fields.map((f) => COLUMNS[f]).join(', ')}, created_at, updated_at, import_batch_id)
+           VALUES (?, ${fields.map(() => '?').join(', ')}, ?, ?, ?)`,
         )
-        .run(ws.accountId, ...fields.map((f) => toDb(values[f])), at, at).lastInsertRowid,
+        .run(ws.accountId, ...fields.map((f) => toDb(values[f])), at, at, opts.importBatchId ?? null).lastInsertRowid,
     );
     syncManagedRule(ws, { id: newId, displayName: input.displayName, etransferName: input.etransferName ?? null, paymentMemoCode: input.paymentMemoCode ?? null }, at);
-    writeAudit(ws, clock, { actor, action: 'member.created', entity: 'member', entityId: newId, details: { displayName: input.displayName } });
+    writeAudit(ws, clock, {
+      actor,
+      action: 'member.created',
+      entity: 'member',
+      entityId: newId,
+      details: opts.importBatchId ? { displayName: input.displayName, importBatchId: opts.importBatchId } : { displayName: input.displayName },
+    });
     return newId;
   })();
-  return getMemberDetail(ws, clock, id);
+}
+
+export function createMember(ws: WorkspaceContext, clock: Clock, actor: string, input: CreateMember): MemberDetail {
+  return getMemberDetail(ws, clock, insertMember(ws, clock, actor, input));
 }
 
 /** Field values as the API reports them, for change detection and the audit trail. */
@@ -301,30 +331,53 @@ function apiValue(row: MemberRow, field: Field): unknown {
   return field === 'remindersEnabled' || field === 'emailsEnabled' ? v === 1 : v;
 }
 
-export function updateMember(ws: WorkspaceContext, clock: Clock, actor: string, id: number, patch: UpdateMember): MemberDetail {
+/** Applies a patch (no detail view) and returns the fields that actually changed. */
+export function applyMemberPatch(ws: WorkspaceContext, clock: Clock, actor: string, id: number, patch: UpdateMember, opts: MemberWriteOptions = {}): string[] {
   const before = requireRow(ws, id);
   const changed = (Object.keys(patch) as Field[]).filter((f) => patch[f] !== undefined && JSON.stringify(toDb(patch[f])) !== JSON.stringify(toDb(apiValue(before, f))));
-  if (changed.length === 0) return getMemberDetail(ws, clock, id);
+  if (changed.length === 0 && !opts.importBatchId) return [];
   if (changed.includes('paymentMemoCode')) assertMemoCodeFree(ws, patch.paymentMemoCode, id);
 
   const at = nowIso(clock);
   ws.sqlite.transaction(() => {
-    ws.sqlite
-      .prepare(`UPDATE members SET ${changed.map((f) => `${COLUMNS[f]} = ?`).join(', ')}, updated_at = ? WHERE account_id = ? AND id = ?`)
-      .run(...changed.map((f) => toDb(patch[f])), at, ws.accountId, id);
+    const sets = changed.map((f) => `${COLUMNS[f]} = ?`);
+    const args: unknown[] = changed.map((f) => toDb(patch[f]));
+    if (opts.importBatchId) {
+      sets.push('import_batch_id = ?');
+      args.push(opts.importBatchId);
+    }
+    ws.sqlite.prepare(`UPDATE members SET ${sets.join(', ')}, updated_at = ? WHERE account_id = ? AND id = ?`).run(...args, at, ws.accountId, id);
     if (changed.some((f) => f === 'paymentMemoCode' || f === 'etransferName' || f === 'displayName')) {
       const after = requireRow(ws, id);
       syncManagedRule(ws, { id, displayName: after.display_name, etransferName: after.etransfer_name, paymentMemoCode: after.payment_memo_code }, at);
     }
-    // Notes can be long and personal: the audit trail records that they changed, not their text.
-    const changes = Object.fromEntries(changed.map((f) => [f, f === 'notes' ? { changed: true } : { from: apiValue(before, f), to: patch[f] }]));
-    writeAudit(ws, clock, { actor, action: 'member.updated', entity: 'member', entityId: id, details: { fields: changed, changes } });
+    if (changed.length > 0) {
+      // Notes can be long and personal: the audit trail records that they changed, not their text.
+      const changes = Object.fromEntries(changed.map((f) => [f, f === 'notes' ? { changed: true } : { from: apiValue(before, f), to: patch[f] }]));
+      writeAudit(ws, clock, {
+        actor,
+        action: 'member.updated',
+        entity: 'member',
+        entityId: id,
+        details: opts.importBatchId ? { fields: changed, changes, importBatchId: opts.importBatchId } : { fields: changed, changes },
+      });
+    }
   })();
+  return changed;
+}
+
+export function updateMember(ws: WorkspaceContext, clock: Clock, actor: string, id: number, patch: UpdateMember): MemberDetail {
+  applyMemberPatch(ws, clock, actor, id, patch);
   return getMemberDetail(ws, clock, id);
 }
 
-/** Manual status transitions (§8.3). `reactivate` hands the member back to the automatic lifecycle. */
-export function changeMemberStatus(ws: WorkspaceContext, clock: Clock, actor: string, id: number, action: MemberStatusAction): MemberDetail {
+function automaticStatus(ws: WorkspaceContext, clock: Clock, row: MemberRow): MemberStatus {
+  const settings = getWorkspaceSettings(ws);
+  return derivedStatus(row.paid_through, resolveTerms(row, settings.memberDefaults).graceDays.value, today(clock, settings.timezone));
+}
+
+/** Manual status transitions (§8.3); returns the new status. `reactivate` hands the member back to the automatic lifecycle. */
+export function applyStatusAction(ws: WorkspaceContext, clock: Clock, actor: string, id: number, action: MemberStatusAction, opts: MemberWriteOptions = {}): MemberStatus {
   const row = requireRow(ws, id);
   let next: MemberStatus;
   if (action === 'pause') {
@@ -336,23 +389,60 @@ export function changeMemberStatus(ws: WorkspaceContext, clock: Clock, actor: st
     next = 'archived';
   } else {
     if (row.status !== 'paused' && row.status !== 'archived') throw conflict('Only paused or archived members can be reactivated.');
-    const settings = getWorkspaceSettings(ws);
-    next = derivedStatus(row.paid_through, resolveTerms(row, settings.memberDefaults).graceDays.value, today(clock, settings.timezone));
+    next = automaticStatus(ws, clock, row);
   }
   const at = nowIso(clock);
   ws.sqlite.transaction(() => {
     ws.sqlite.prepare('UPDATE members SET status = ?, updated_at = ? WHERE account_id = ? AND id = ?').run(next, at, ws.accountId, id);
-    writeAudit(ws, clock, { actor, action: 'member.status_changed', entity: 'member', entityId: id, details: { action, from: row.status, to: next } });
+    const details = { action, from: row.status, to: next, ...(opts.importBatchId ? { importBatchId: opts.importBatchId } : {}) };
+    writeAudit(ws, clock, { actor, action: 'member.status_changed', entity: 'member', entityId: id, details });
   })();
+  return next;
+}
+
+export function changeMemberStatus(ws: WorkspaceContext, clock: Clock, actor: string, id: number, action: MemberStatusAction): MemberDetail {
+  applyStatusAction(ws, clock, actor, id, action);
   return getMemberDetail(ws, clock, id);
 }
 
+/** What an import "before-image" stores (§12.2 step 6): every admin-editable column plus the manual status. */
+export interface MemberSnapshot {
+  fields: UpdateMember;
+  status: MemberStatus;
+  importBatchId: number | null;
+}
+
+export function memberSnapshot(ws: WorkspaceContext, id: number): MemberSnapshot {
+  const row = requireRow(ws, id);
+  const fields = Object.fromEntries((Object.keys(COLUMNS) as Field[]).map((f) => [f, apiValue(row, f)])) as UpdateMember;
+  return { fields, status: row.status, importBatchId: row.import_batch_id };
+}
+
+/** Puts a member back to a snapshot (import undo). Manual statuses are restored as they were; otherwise the automatic status is recomputed. */
+export function restoreMemberSnapshot(ws: WorkspaceContext, clock: Clock, actor: string, id: number, snap: MemberSnapshot, note: string): string[] {
+  const changed = applyMemberPatch(ws, clock, actor, id, snap.fields);
+  const row = requireRow(ws, id);
+  const status = snap.status === 'paused' || snap.status === 'archived' ? snap.status : automaticStatus(ws, clock, row);
+  ws.sqlite.transaction(() => {
+    ws.sqlite.prepare('UPDATE members SET status = ?, import_batch_id = ? WHERE account_id = ? AND id = ?').run(status, snap.importBatchId, ws.accountId, id);
+    if (status !== row.status) {
+      writeAudit(ws, clock, { actor, action: 'member.status_changed', entity: 'member', entityId: id, details: { action: 'restore', from: row.status, to: status, note } });
+    }
+  })();
+  return changed;
+}
+
+/** True when the member has payments or ledger entries. */
+export function memberHasHistory(ws: WorkspaceContext, id: number): boolean {
+  return hasHistory(ws, id);
+}
+
 /** "Delete member with no history" (§6.0 rule 5). Anyone with payments or ledger entries can only be archived. */
-export function deleteMember(ws: WorkspaceContext, clock: Clock, actor: string, id: number): void {
+export function deleteMember(ws: WorkspaceContext, clock: Clock, actor: string, id: number, details: Record<string, unknown> = {}): void {
   const row = requireRow(ws, id);
   if (hasHistory(ws, id)) throw conflict('This member has payment history and cannot be deleted. Archive them instead.', { reason: 'has_history' });
   ws.sqlite.transaction(() => {
     ws.sqlite.prepare('DELETE FROM members WHERE account_id = ? AND id = ?').run(ws.accountId, id);
-    writeAudit(ws, clock, { actor, action: 'member.deleted', entity: 'member', entityId: id, details: { displayName: row.display_name } });
+    writeAudit(ws, clock, { actor, action: 'member.deleted', entity: 'member', entityId: id, details: { displayName: row.display_name, ...details } });
   })();
 }

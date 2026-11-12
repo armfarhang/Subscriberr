@@ -77,6 +77,18 @@ Nothing here needs a real account; these are quick sanity checks with your own d
 - [ ] Look up an old e-Transfer from someone who sometimes pays from another account or name, and
       add that as an alias on the member.
 
+## After Milestone 4 (CSV import / export)
+- [ ] Export your members and open the file in **Excel** and in **Google Sheets**: accents
+      (é, ü…) display correctly, and a note starting with `=` shows as text, not a formula.
+- [ ] If you keep members in an old spreadsheet, import it: Import / export → choose the file →
+      check the column matching → review every flagged row (the side-by-side view) → Import.
+      Save the column matching as a preset if you will import that sheet again.
+- [ ] Save the file from Excel as "CSV (Comma delimited)" (Windows encoding) and as "CSV UTF-8"
+      and import both: names with accents must come through the same.
+- [ ] After an import, open one updated member: the timeline shows "Balance set … (CSV import #n)".
+      Then try **Undo this import** once on a test import, within 24 hours.
+- [ ] Check the safety backup appears under System → Backups as `pre_import`.
+
 ## Later milestones (placeholders — detailed steps are added when each lands)
 - [ ] **M5/M6:** first real Gmail scan; send a real e-Transfer and watch it flow end to end.
 - [ ] **M7:** check the email template in Gmail (web + mobile), Apple Mail and Outlook.

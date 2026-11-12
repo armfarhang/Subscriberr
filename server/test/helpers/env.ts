@@ -13,6 +13,7 @@ import { createSystemContext, type SystemContext } from '../../src/core/workspac
 import { openDatabase, type Sqlite } from '../../src/db/client.js';
 import { migrate } from '../../src/db/migrate.js';
 import type { BackupEnv } from '../../src/modules/system/backup.js';
+import { createMediaProviderFactory } from '../../src/modules/media/factory.js';
 
 export const TEST_SECRET = 'test-secret-test-secret-test-secret-0123456789';
 export const TEST_TZ = 'America/Toronto';
@@ -127,6 +128,6 @@ export function testApp(world: TestWorld, options: { webDir?: string; google?: G
   const config = options.config ?? world.config;
   const google = options.google === undefined ? new FakeGoogleAuthProvider(config.baseUrl, world.clock) : options.google;
   const secretBox = testSecretBox();
-  const app = createApp({ config, ctx: world.ctx, clock: world.clock, log: silentLogger, secretBox, google, backupEnv: world.backupEnv, webDir: options.webDir });
+  const app = createApp({ config, ctx: world.ctx, clock: world.clock, log: silentLogger, secretBox, google, backupEnv: world.backupEnv, webDir: options.webDir, media: createMediaProviderFactory(config) });
   return { app, google, secretBox, config };
 }

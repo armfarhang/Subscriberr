@@ -83,3 +83,12 @@ export function completeOnboarding(ws: WorkspaceContext, clock: Clock, actor: st
   })();
   return getWorkspaceSettings(ws);
 }
+
+/** Raw JSON setting of this workspace (for module-owned keys such as import mapping presets). */
+export function readJsonSetting(ws: WorkspaceContext, key: string): unknown {
+  return readRaw(ws).get(key);
+}
+
+export function writeJsonSetting(ws: WorkspaceContext, key: string, value: unknown): void {
+  put(ws, key, value);
+}

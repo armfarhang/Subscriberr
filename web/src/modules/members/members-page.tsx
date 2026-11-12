@@ -1,6 +1,6 @@
 import { MEMBER_LIST_FILTERS, MEMBER_SORTS, type MemberListFilter, type MemberSort, type MemberSummary } from '@subscriberr/shared';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, Plus, Search, Users } from 'lucide-react';
+import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, Download, Plus, Search, Upload, Users } from 'lucide-react';
 import * as React from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -71,11 +71,23 @@ export function MembersPage() {
           <h2 className="text-2xl font-semibold tracking-tight lg:hidden">Members</h2>
           <p className="text-sm text-muted-foreground">Who has access, until when, and on what plan.</p>
         </div>
-        <Button asChild>
-          <Link to="/members/new">
-            <Plus /> Add member
-          </Link>
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button asChild variant="outline">
+            <a href={api.csvExportUrl({ q: q || undefined, status, sort, dir })} download title="Export the members shown, as CSV">
+              <Download /> Export CSV
+            </a>
+          </Button>
+          <Button asChild variant="outline">
+            <Link to="/import-export">
+              <Upload /> Import
+            </Link>
+          </Button>
+          <Button asChild>
+            <Link to="/members/new">
+              <Plus /> Add member
+            </Link>
+          </Button>
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-2">

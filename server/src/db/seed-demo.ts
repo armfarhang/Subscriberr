@@ -29,6 +29,16 @@ export const DEMO_MEMBERS: DemoMember[] = [
   { displayName: 'Riley (no email yet)', etransferName: 'Riley Sample', email: null, notes: 'Demo member without an email on file.' },
 ];
 
+/** Usernames of the fake servers' users (modules/media/fake.ts), so links resolve like real ones. */
+const DEMO_USERNAMES: Record<string, string> = {
+  'plex-101': 'payer.one',
+  'plex-102': 'pat',
+  'plex-104': 'jordan',
+  'jf-101': 'payerone',
+  'jf-103': 'sam',
+  'jf-104': 'jordan',
+};
+
 export const DEMO_MEMBER_DEFAULTS = {
   planAmountCents: 1500,
   planPeriodDays: 30,
@@ -85,8 +95,8 @@ export function seedDemo(db: Sqlite, now: Date, timeZone: string): SeedResult {
       const memberId = Number(
         member.run(accountId, m.displayName, m.etransferName, m.email, m.notes ?? null, m.planAmountCents ?? null, at, at).lastInsertRowid,
       );
-      if (m.plexUserId) link.run(accountId, memberId, plexId, m.plexUserId, m.displayName);
-      if (m.jellyfinUserId) link.run(accountId, memberId, jellyfinId, m.jellyfinUserId, m.displayName);
+      if (m.plexUserId) link.run(accountId, memberId, plexId, m.plexUserId, DEMO_USERNAMES[m.plexUserId] ?? null);
+      if (m.jellyfinUserId) link.run(accountId, memberId, jellyfinId, m.jellyfinUserId, DEMO_USERNAMES[m.jellyfinUserId] ?? null);
       for (const a of m.emailAliases ?? []) alias.run(accountId, memberId, a.toLowerCase(), at);
     }
 

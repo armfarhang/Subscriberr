@@ -8,6 +8,8 @@ import { api, ApiRequestError } from '@/lib/api';
 import { queryKeys } from '@/lib/query-keys';
 import { SignInPage } from '@/modules/auth/sign-in';
 import { DashboardPage } from '@/modules/dashboard/dashboard-page';
+import { ImportExportPage } from '@/modules/import-export/import-export-page';
+import { ImportWizardPage } from '@/modules/import-export/import-wizard-page';
 import { MemberDetailPage } from '@/modules/members/member-detail-page';
 import { MembersPage } from '@/modules/members/members-page';
 import { NewMemberPage } from '@/modules/members/new-member-page';
@@ -65,6 +67,8 @@ export function App() {
         <Route path="members" element={<MembersPage />} />
         <Route path="members/new" element={<NewMemberPage />} />
         <Route path="members/:id" element={<MemberDetailPage />} />
+        <Route path="import-export" element={<ImportExportPage />} />
+        <Route path="import-export/:id" element={<ImportWizardPage />} />
         <Route path="system" element={<SystemPage me={account} />} />
         <Route path="settings" element={<SettingsPage me={account} config={config.data} />} />
         {NAV_ITEMS.filter((i) => i.milestone !== undefined).map((item) => (

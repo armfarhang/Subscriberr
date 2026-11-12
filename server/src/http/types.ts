@@ -6,6 +6,7 @@ import type { SystemContext, WorkspaceContext } from '../core/workspace-context.
 import type { AccountRecord } from '../modules/auth/accounts.js';
 import type { GoogleAuthProvider } from '../modules/auth/google.js';
 import type { Scheduler } from '../modules/jobs/scheduler.js';
+import type { MediaProviderFactory } from '../modules/media/factory.js';
 import type { BackupEnv } from '../modules/system/backup.js';
 
 /** Everything the HTTP layer needs; built once in main.ts (and by tests). */
@@ -19,6 +20,8 @@ export interface AppDeps {
   google: GoogleAuthProvider | null;
   backupEnv: BackupEnv;
   scheduler?: Scheduler;
+  /** Resolves configured Plex/Jellyfin servers to providers (fake in demo mode). */
+  media?: MediaProviderFactory;
   /** Directory with the built web app (web/dist). Omitted → API only. */
   webDir?: string;
 }

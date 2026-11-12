@@ -13,7 +13,9 @@ import { seedDemo } from './db/seed-demo.js';
 import { countAccounts } from './modules/auth/accounts.js';
 import { registerAuthJobs } from './modules/auth/jobs.js';
 import { createGoogleProviderForConfig } from './modules/auth/provider-factory.js';
+import { registerCsvJobs } from './modules/csv/jobs.js';
 import { Scheduler } from './modules/jobs/scheduler.js';
+import { createMediaProviderFactory } from './modules/media/factory.js';
 import { ensureBackupDir } from './modules/system/backup-destination.js';
 import { type BackupEnv, type BackupOutcome, createBackup, getBackupRetention, recordBackupRun } from './modules/system/backup.js';
 import { registerSystemJobs } from './modules/system/jobs.js';
@@ -97,9 +99,11 @@ export async function serve(): Promise<void> {
   const scheduler = new Scheduler(ctx, clock, log);
   registerSystemJobs(scheduler, backupEnv);
   registerAuthJobs(scheduler, { ctx, clock, secretBox, google, log }, config.timezone);
+  registerCsvJobs(scheduler, ctx, clock, config.timezone);
   scheduler.start();
 
-  const app = createApp({ config, ctx, clock, log, secretBox, google, backupEnv, scheduler, webDir: WEB_DIR });
+  const media = createMediaProviderFactory(config);
+  const app = createApp({ config, ctx, clock, log, secretBox, google, backupEnv, scheduler, media, webDir: WEB_DIR });
   const server = serveHttp({ fetch: app.fetch, port: config.port, hostname: '0.0.0.0' }, (info) => {
     log.info(`${APP_NAME} ${APP_VERSION} listening`, { port: info.port, baseUrl: config.baseUrl, dataDir: config.dataDir, backupDir: config.backupDir });
   });

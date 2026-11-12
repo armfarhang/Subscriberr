@@ -28,23 +28,37 @@ function show(field: string, v: unknown): string {
   return String(v);
 }
 
+const fromImport = (d: Record<string, unknown>) => (typeof d.importBatchId === 'number' ? ` (CSV import #${d.importBatchId})` : '');
+
 export function describeEvent(e: TimelineEvent): string {
   const d = (e.details ?? {}) as Record<string, unknown>;
   switch (e.action) {
     case 'member.created':
-      return 'Member added';
+      return `Member added${fromImport(d)}`;
     case 'member.updated': {
       const changes = (d.changes ?? {}) as Record<string, { from?: unknown; to?: unknown; changed?: boolean }>;
       const parts = Object.entries(changes).map(([field, c]) => {
         const label = FIELD_LABEL[field] ?? field;
         return c.changed ? `${label} edited` : `${label}: ${show(field, c.from)} → ${show(field, c.to)}`;
       });
-      return parts.length > 0 ? `Changed ${parts.join('; ')}` : 'Details changed';
+      return `${parts.length > 0 ? `Changed ${parts.join('; ')}` : 'Details changed'}${fromImport(d)}`;
     }
     case 'member.status_changed':
       return `Status: ${STATUS_LABEL[d.from as keyof typeof STATUS_LABEL] ?? String(d.from)} → ${STATUS_LABEL[d.to as keyof typeof STATUS_LABEL] ?? String(d.to)}`;
     case 'member.alias_added':
       return `${d.kind === 'email' ? 'Email' : 'Name'} alias added: ${String(d.value)}${d.source === 'learned' ? ' (learned from a payment)' : ''}`;
+    case 'ledger.manual_set': {
+      const set = [d.paidThrough ? `paid through ${String(d.paidThrough)}` : null, typeof d.creditCents === 'number' ? `credit ${formatCents(d.creditCents)}` : null].filter(Boolean).join(', ');
+      return `Balance set: ${set || 'no change'}${d.note ? ` (${String(d.note)})` : ''}`;
+    }
+    case 'ledger.voided':
+      return `Balance entry reversed${d.note ? ` (${String(d.note)})` : ''}`;
+    case 'member.server_linked':
+      return `Linked to media-server user ${String(d.username ?? d.externalUserId)}${fromImport(d)}`;
+    case 'member.server_link_restored':
+      return `Media-server link put back as before${fromImport(d)}`;
+    case 'member.deleted':
+      return 'Member deleted';
     case 'member.alias_removed':
       return `${d.kind === 'email' ? 'Email' : 'Name'} alias removed: ${String(d.value)}`;
     default:

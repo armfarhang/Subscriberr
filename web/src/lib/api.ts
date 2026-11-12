@@ -11,6 +11,15 @@ import type {
   MemberStatusAction,
   UpdateMember,
   AddAlias,
+  ImportBatchListItem,
+  ImportBatchView,
+  ImportBulk,
+  ImportMapping,
+  ImportRowFilter,
+  ImportRowPatch,
+  ImportRowsPage,
+  ImportRowView,
+  MappingPreset,
   PublicConfig,
   SystemStatus,
   UpdateWorkspaceSettings,
@@ -35,7 +44,8 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   headers.set('Accept', 'application/json');
   // CSRF: the server requires this header on every state-changing request.
   headers.set('X-Requested-With', 'subscriberr');
-  if (init.body !== undefined && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
+  // FormData sets its own multipart Content-Type (with the boundary).
+  if (init.body !== undefined && !(init.body instanceof FormData) && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
 
   const res = await fetch(path, { ...init, headers, credentials: 'same-origin' });
   const text = await res.text();
@@ -91,6 +101,31 @@ export const api = {
   deleteMember: (id: number) => send<{ ok: true }>('DELETE', `/api/members/${id}`),
   addAlias: (id: number, alias: AddAlias) => send<MemberDetail>('POST', `/api/members/${id}/aliases`, alias),
   removeAlias: (id: number, aliasId: number) => send<MemberDetail>('DELETE', `/api/members/${id}/aliases/${aliasId}`),
+
+  csvExportUrl: (query: Pick<MemberListQuery, 'q' | 'status' | 'sort' | 'dir'> = {}) => {
+    const params = new URLSearchParams();
+    for (const [k, v] of Object.entries(query)) if (v !== undefined && v !== '') params.set(k, String(v));
+    return `/api/csv/export?${params.toString()}`;
+  },
+  csvTemplateUrl: '/api/csv/template',
+  imports: () => request<{ items: ImportBatchListItem[] }>('/api/csv/imports'),
+  uploadImport: (file: File) => {
+    const body = new FormData();
+    body.append('file', file);
+    return request<ImportBatchView>('/api/csv/imports', { method: 'POST', body });
+  },
+  importBatch: (id: number) => request<ImportBatchView>(`/api/csv/imports/${id}`),
+  setImportMapping: (id: number, mapping: ImportMapping) => send<ImportBatchView>('PUT', `/api/csv/imports/${id}/mapping`, mapping),
+  importRows: (id: number, q: { filter: ImportRowFilter; page: number; pageSize: number }) =>
+    request<ImportRowsPage>(`/api/csv/imports/${id}/rows?filter=${q.filter}&page=${q.page}&pageSize=${q.pageSize}`),
+  patchImportRow: (id: number, rowId: number, patch: ImportRowPatch) =>
+    send<{ row: ImportRowView; summary: ImportRowsPage['summary'] }>('PATCH', `/api/csv/imports/${id}/rows/${rowId}`, patch),
+  bulkImport: (id: number, bulk: ImportBulk) => send<{ summary: ImportRowsPage['summary'] }>('POST', `/api/csv/imports/${id}/bulk`, bulk),
+  commitImport: (id: number) => send<ImportBatchView>('POST', `/api/csv/imports/${id}/commit`),
+  undoImport: (id: number) => send<ImportBatchView>('POST', `/api/csv/imports/${id}/undo`),
+  abandonImport: (id: number) => send<{ ok: true }>('DELETE', `/api/csv/imports/${id}`),
+  mappingPresets: () => request<{ items: MappingPreset[] }>('/api/csv/presets'),
+  saveMappingPresets: (items: MappingPreset[]) => send<{ items: MappingPreset[] }>('PUT', '/api/csv/presets', { items }),
 
   systemStatus: () => request<SystemStatus>('/api/system/status'),
   backups: () => request<{ items: BackupRun[] }>('/api/system/backups'),
