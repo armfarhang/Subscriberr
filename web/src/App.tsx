@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import * as React from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { NAV_ITEMS } from '@/components/layout/nav';
 import { PlaceholderPage } from '@/components/layout/placeholder';
@@ -7,6 +8,8 @@ import { api, ApiRequestError } from '@/lib/api';
 import { queryKeys } from '@/lib/query-keys';
 import { SignInPage } from '@/modules/auth/sign-in';
 import { DashboardPage } from '@/modules/dashboard/dashboard-page';
+import { OnboardingWizard } from '@/modules/onboarding/onboarding-wizard';
+import { SettingsPage } from '@/modules/settings/settings-page';
 import { SystemPage } from '@/modules/system/system-page';
 
 function FullScreenMessage({ title, detail }: { title: string; detail?: string }) {
@@ -18,7 +21,19 @@ function FullScreenMessage({ title, detail }: { title: string; detail?: string }
   );
 }
 
+/** `?auth_notice=` only matters for one render (the Gmail banner shows the state itself). */
+function useClearAuthNotice() {
+  React.useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (!params.has('auth_notice')) return;
+    params.delete('auth_notice');
+    const rest = params.toString();
+    window.history.replaceState(null, '', `${window.location.pathname}${rest ? `?${rest}` : ''}`);
+  }, []);
+}
+
 export function App() {
+  useClearAuthNotice();
   const config = useQuery({ queryKey: queryKeys.publicConfig, queryFn: api.publicConfig, staleTime: Infinity });
   const me = useQuery({
     queryKey: queryKeys.me,
@@ -39,11 +54,13 @@ export function App() {
   if (!me.data) return <SignInPage config={config.data} />;
 
   const account = me.data;
+  if (!account.onboardingCompleted) return <OnboardingWizard me={account} config={config.data} />;
   return (
     <Routes>
       <Route element={<Shell me={account} config={config.data} />}>
         <Route index element={<DashboardPage me={account} />} />
         <Route path="system" element={<SystemPage me={account} />} />
+        <Route path="settings" element={<SettingsPage me={account} config={config.data} />} />
         {NAV_ITEMS.filter((i) => i.milestone !== undefined).map((item) => (
           <Route key={item.to} path={`${item.to.slice(1)}/*`} element={<PlaceholderPage item={item} />} />
         ))}

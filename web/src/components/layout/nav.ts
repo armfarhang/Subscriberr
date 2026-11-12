@@ -54,7 +54,7 @@ export const NAV: NavGroup[] = [
     label: 'Administration',
     items: [
       { to: '/media', label: 'Servers', icon: Server, milestone: 9, description: 'Plex and Jellyfin servers, libraries and enforcement.' },
-      { to: '/settings', label: 'Settings', icon: Settings, milestone: 2, description: 'Google connection, allowed accounts, defaults and reminders.' },
+      { to: '/settings', label: 'Settings', icon: Settings },
       { to: '/system', label: 'System', icon: Activity },
     ],
   },

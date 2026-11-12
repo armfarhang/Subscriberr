@@ -9,6 +9,17 @@ export function isIsoDate(value: string): boolean {
   return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === value;
 }
 
+/** True for an IANA timezone name the runtime knows (e.g. America/Toronto). */
+export function isValidTimeZone(timeZone: string): boolean {
+  if (!timeZone) return false;
+  try {
+    new Intl.DateTimeFormat('en-CA', { timeZone });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function toEpochDay(date: string): number {
   if (!isIsoDate(date)) throw new Error(`Invalid date: ${date}`);
   return Math.round(Date.parse(`${date}T00:00:00Z`) / 86_400_000);

@@ -19,7 +19,8 @@ services:
       TZ: America/Toronto
       PUID: "99"
       PGID: "100"
-      # ADMIN_EMAILS: "someone@example.com"
+      # Recommended: only these Google accounts can become the Owner of a fresh install.
+      ADMIN_EMAILS: "" # e.g. "you@gmail.com"
     volumes:
       # Database, custom template packs, logos, import staging.
       - /mnt/user/appdata/subscriberr:/data

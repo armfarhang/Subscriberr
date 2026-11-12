@@ -58,9 +58,9 @@ export function seedDemo(db: Sqlite, now: Date, timeZone: string): SeedResult {
     );
 
     const setting = db.prepare('INSERT INTO settings (account_id, key, value) VALUES (?, ?, ?)');
-    setting.run(accountId, 'timezone', JSON.stringify(timeZone));
     setting.run(accountId, 'member_defaults', JSON.stringify(DEMO_MEMBER_DEFAULTS));
     setting.run(accountId, 'etransfer_email', JSON.stringify(DEMO_OWNER_EMAIL));
+    setting.run(accountId, 'onboarding_completed', 'true');
     setting.run(accountId, 'etransfer_instructions', JSON.stringify('Send an Interac e-Transfer to demo@example.com (Autodeposit is enabled).'));
 
     const server = db.prepare(

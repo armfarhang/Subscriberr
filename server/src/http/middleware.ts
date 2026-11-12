@@ -3,20 +3,36 @@ import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
 import { HTTPException } from 'hono/http-exception';
 import { getConnInfo } from '@hono/node-server/conninfo';
 import { AppError, errorBody, forbidden, unauthorized } from '../core/errors.js';
-import { resolveSession, SESSION_COOKIE, SESSION_TTL_MS } from '../modules/auth/sessions.js';
+import { forWorkspace, type WorkspaceContext } from '../core/workspace-context.js';
+import { mayUseAccount } from '../modules/auth/allowlist.js';
+import { deleteSession, resolveSession, SESSION_COOKIE, SESSION_TTL_MS } from '../modules/auth/sessions.js';
 import type { AppDeps, AppEnv } from './types.js';
 
-/** Client IP: the first X-Forwarded-For hop when TRUST_PROXY is on (behind NPM), else the socket. */
-export function clientIp(c: Context, trustProxy: boolean): string | null {
-  if (trustProxy) {
-    const forwarded = c.req.header('x-forwarded-for')?.split(',')[0]?.trim();
-    if (forwarded) return forwarded;
+/**
+ * Client IP for rate limiting and logs (Spec §5.4). Behind NPM (TRUST_PROXY=true → 1 hop) the
+ * real client is the address the proxy APPENDED to X-Forwarded-For, i.e. counted from the right.
+ * Taking the leftmost entry would let a client spoof its IP by sending its own header.
+ */
+export function clientIpFrom(forwardedFor: string | undefined, socketAddress: string | null, trustedHops: number): string | null {
+  if (trustedHops > 0 && forwardedFor) {
+    const hops = forwardedFor
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const candidate = hops[hops.length - trustedHops] ?? hops[0];
+    if (candidate) return candidate;
   }
+  return socketAddress;
+}
+
+export function clientIp(c: Context, trustedHops: number): string | null {
+  let socket: string | null;
   try {
-    return getConnInfo(c).remote.address ?? null;
+    socket = getConnInfo(c).remote.address ?? null;
   } catch {
-    return null; // app.request() in tests has no socket
+    socket = null; // app.request() in tests has no socket
   }
+  return clientIpFrom(c.req.header('x-forwarded-for'), socket, trustedHops);
 }
 
 export function setSessionCookie(c: Context, deps: AppDeps, token: string): void {
@@ -33,13 +49,22 @@ export function clearSessionCookie(c: Context, deps: AppDeps): void {
   deleteCookie(c, SESSION_COOKIE, { path: '/', secure: deps.config.secureCookies });
 }
 
-/** Loads the signed-in account (if any) into the request context. */
+/**
+ * Loads the signed-in account and its workspace context. An operator who was removed from the
+ * allowlist is signed out here even if a session row somehow survived (defence in depth).
+ */
 export function sessionMiddleware(deps: AppDeps): MiddlewareHandler<AppEnv> {
   return async (c, next) => {
     const token = getCookie(c, SESSION_COOKIE) ?? null;
-    const account = token ? resolveSession(deps.ctx, deps.clock, token) : null;
+    let account = token ? resolveSession(deps.ctx, deps.clock, token) : null;
+    if (account && token && !mayUseAccount(deps.ctx, deps.config, account)) {
+      deleteSession(deps.ctx, token);
+      clearSessionCookie(c, deps);
+      account = null;
+    }
     c.set('sessionToken', account ? token : null);
     c.set('account', account);
+    c.set('ws', account ? forWorkspace(deps.ctx, account.id) : null);
     await next();
   };
 }
@@ -55,6 +80,20 @@ export const requireOwner: MiddlewareHandler<AppEnv> = async (c, next) => {
   if (account.role !== 'owner') throw forbidden('Only the owner can do this');
   await next();
 };
+
+/** The request's workspace context (throws 401 when not signed in). */
+export function workspaceOf(c: Context<AppEnv>): WorkspaceContext {
+  const ws = c.get('ws');
+  if (!ws) throw unauthorized();
+  return ws;
+}
+
+/** `admin:<email>` actor string for the audit log. */
+export function actorOf(c: Context<AppEnv>): string {
+  const account = c.get('account');
+  if (!account) throw unauthorized();
+  return `admin:${account.email}`;
+}
 
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 export const CSRF_HEADER = 'x-requested-with';

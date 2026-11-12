@@ -21,6 +21,8 @@ export const publicConfigSchema = z.object({
   version: z.string(),
   devFakeLogin: z.boolean(),
   demoMode: z.boolean(),
+  /** "Sign in with Google" is available (real Google, or the local fake Google in demo mode). */
+  googleSignIn: z.boolean(),
 });
 export type PublicConfig = z.infer<typeof publicConfigSchema>;
 
@@ -30,6 +32,8 @@ export const meSchema = z.object({
   role: z.enum(ACCOUNT_ROLES),
   gmailStatus: z.enum(GMAIL_STATUSES),
   timezone: z.string(),
+  /** False until this workspace has finished the first-run wizard. */
+  onboardingCompleted: z.boolean(),
 });
 export type Me = z.infer<typeof meSchema>;
 

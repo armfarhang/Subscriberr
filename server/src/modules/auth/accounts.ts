@@ -58,4 +58,11 @@ export function createAccount(
   return account;
 }
 
-export const toMe = (a: AccountRecord): Me => ({ id: a.id, email: a.email, role: a.role, gmailStatus: a.gmailStatus, timezone: a.timezone });
+export const toMe = (a: AccountRecord, onboardingCompleted: boolean): Me => ({
+  id: a.id,
+  email: a.email,
+  role: a.role,
+  gmailStatus: a.gmailStatus,
+  timezone: a.timezone,
+  onboardingCompleted,
+});

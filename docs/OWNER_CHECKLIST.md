@@ -34,9 +34,39 @@ covered by automated tests against demo mode. Items are added as milestones land
 - [ ] Delete the `*.before-restore-*` copies in `/data` once you are satisfied.
 - [ ] Confirm `/backups` is included in your off-box backup (Appdata Backup plugin or cloud sync).
 
+## After Milestone 2 (Auth & workspaces)
+
+Everything below was tested against a fake Google; only you can try it with the real one.
+
+### Google OAuth client (README → "Google sign-in")
+- [ ] Create the Google Cloud project, enable the **Gmail API**, configure the consent screen
+      (External, authorized domain `mediaservers.org`, scopes `openid email profile gmail.modify gmail.send`).
+- [ ] **Publish the consent screen ("In production").** Otherwise Gmail disconnects every 7 days.
+- [ ] Create a *Web application* OAuth client with **both** redirect URIs:
+      `http://localhost:3000/auth/google/callback` and `https://subscriberr.mediaservers.org/auth/google/callback`.
+- [ ] Set `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` and **`ADMIN_EMAILS=<your Gmail>`** before the first start.
+
+### Nginx Proxy Manager
+- [ ] Proxy host `subscriberr.mediaservers.org` → `http://subscriberr:3000`, Let's Encrypt
+      certificate, *Force SSL*, *HTTP/2*, *Block common exploits*. Container on NPM's Docker network.
+- [ ] `BASE_URL=https://subscriberr.mediaservers.org`, `TRUST_PROXY=true`.
+- [ ] If the Cloudflare record is proxied (orange cloud): set `TRUST_PROXY=2` or make NPM pass
+      the real client IP (it is used for sign-in rate limiting).
+
+### First real sign-in (local first, then production)
+- [ ] Locally, with `SEED_DEMO=false` and `DEV_FAKE_LOGIN=false`: **Sign in with Google**
+      → Google's real consent screen (accept the "unverified app" warning) → you land in the
+      first-run wizard as **Owner**, Gmail shows **Connected**.
+- [ ] Untick Gmail access on the consent screen once: the app signs you in but shows
+      "Gmail is disconnected"; *Reconnect Google* fixes it.
+- [ ] Settings → *Disconnect Google account*: at <https://myaccount.google.com/permissions>
+      Subscriberr's access is gone; *Reconnect Google* restores it.
+- [ ] Add a second Google account to the allowlist, sign in with it in a private window: it gets
+      its own empty workspace and wizard. Remove it again: that window is signed out on its next action.
+- [ ] A Google account **not** on the allowlist sees "This Google account is not allowed to sign in".
+- [ ] Production: repeat the first sign-in through `https://subscriberr.mediaservers.org`.
+
 ## Later milestones (placeholders — detailed steps are added when each lands)
-- [ ] **M2:** create the Google OAuth client, set the consent screen to *In production*, register
-      both redirect URIs, first real sign-in, NPM proxy host + certificate, `TRUST_PROXY`.
 - [ ] **M5/M6:** first real Gmail scan; send a real e-Transfer and watch it flow end to end.
 - [ ] **M7:** check the email template in Gmail (web + mobile), Apple Mail and Outlook.
 - [ ] **M9:** verify Plex **empty-library revoke** behaviour and the Plex endpoints; verify

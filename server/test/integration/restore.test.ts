@@ -12,7 +12,7 @@ import { runBackup } from '../../src/modules/system/backup.js';
 import { checkDatabaseFile } from '../../src/modules/system/integrity.js';
 import { acquireRunLock, isAppRunning } from '../../src/modules/system/lock.js';
 import { RestoreError, restoreBackup } from '../../src/modules/system/restore.js';
-import { createWorld, insertAccount, insertMember, onCleanup, tempDir, TEST_TZ, testConfig } from '../helpers/env.js';
+import { createWorld, insertAccount, insertMember, onCleanup, tempDir, TEST_TZ, testConfig, testSecretBox } from '../helpers/env.js';
 
 async function worldWithBackup() {
   const world = createWorld();
@@ -60,7 +60,7 @@ describe('restore (Spec §6.9 layer 5)', () => {
     expect(checkIntegrity(boot.db).ok).toBe(true);
     const ctx = createSystemContext(boot.db);
     const config = testConfig(freshData, path.join(world.root, 'backups2'));
-    const app = createApp({ config, ctx, clock: world.clock, log: silentLogger, backupEnv: { ...world.backupEnv, ctx, dataDir: freshData } });
+    const app = createApp({ config, ctx, clock: world.clock, log: silentLogger, secretBox: testSecretBox(), google: null, backupEnv: { ...world.backupEnv, ctx, dataDir: freshData } });
     const health = await app.request('/healthz');
     expect(health.status).toBe(200);
     expect(await health.json()).toMatchObject({ status: 'ok', schemaVersion: latestSchemaVersion() });

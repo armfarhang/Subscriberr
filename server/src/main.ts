@@ -4,11 +4,15 @@ import { serve as serveHttp } from '@hono/node-server';
 import { toUtcIso } from '@subscriberr/shared';
 import { createApp } from './app.js';
 import { loadConfig, loadDotEnv } from './config.js';
+import { createSecretBox } from './core/crypto.js';
 import { createLogger } from './core/logger.js';
 import { nowIso, systemClock } from './core/time.js';
 import { createSystemContext } from './core/workspace-context.js';
 import { bootDatabase } from './db/boot.js';
 import { seedDemo } from './db/seed-demo.js';
+import { countAccounts } from './modules/auth/accounts.js';
+import { registerAuthJobs } from './modules/auth/jobs.js';
+import { createGoogleProviderForConfig } from './modules/auth/provider-factory.js';
 import { Scheduler } from './modules/jobs/scheduler.js';
 import { ensureBackupDir } from './modules/system/backup-destination.js';
 import { type BackupEnv, type BackupOutcome, createBackup, getBackupRetention, recordBackupRun } from './modules/system/backup.js';
@@ -82,11 +86,20 @@ export async function serve(): Promise<void> {
   const destination = runBackupDestinationCheck(config.backupDir, config.dataDir);
   if (!destination.ok) log.warn('backup destination problem', { problems: destination.problems });
 
+  const secretBox = createSecretBox(config.appSecret);
+  const google = await createGoogleProviderForConfig(config, clock);
+  if (google?.kind === 'fake') log.warn('Google sign-in uses the local FAKE Google provider (demo mode).');
+  if (!google) log.warn('Google sign-in is not configured (GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET).');
+  if (countAccounts(ctx) === 0 && config.adminEmails.length === 0 && !config.seedDemo) {
+    log.warn('No owner yet and ADMIN_EMAILS is empty: the FIRST Google account to sign in becomes the owner. Set ADMIN_EMAILS to restrict it.');
+  }
+
   const scheduler = new Scheduler(ctx, clock, log);
   registerSystemJobs(scheduler, backupEnv);
+  registerAuthJobs(scheduler, { ctx, clock, secretBox, google, log }, config.timezone);
   scheduler.start();
 
-  const app = createApp({ config, ctx, clock, log, backupEnv, scheduler, webDir: WEB_DIR });
+  const app = createApp({ config, ctx, clock, log, secretBox, google, backupEnv, scheduler, webDir: WEB_DIR });
   const server = serveHttp({ fetch: app.fetch, port: config.port, hostname: '0.0.0.0' }, (info) => {
     log.info(`${APP_NAME} ${APP_VERSION} listening`, { port: info.port, baseUrl: config.baseUrl, dataDir: config.dataDir, backupDir: config.backupDir });
   });

@@ -1,17 +1,17 @@
 import { mkdirSync, readdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { createApp } from '../../src/app.js';
-import { silentLogger } from '../../src/core/logger.js';
+import type { createApp } from '../../src/app.js';
+import { latestSchemaVersion } from '../../src/db/migrate.js';
 import { seedDemo } from '../../src/db/seed-demo.js';
 import { SESSION_TTL_MS } from '../../src/modules/auth/sessions.js';
-import { createWorld, insertAccount, testConfig } from '../helpers/env.js';
+import { allowEmail, createWorld, insertAccount, testApp, testConfig } from '../helpers/env.js';
 
 const CSRF = { 'x-requested-with': 'subscriberr', 'content-type': 'application/json' };
 
 function setup(env: NodeJS.ProcessEnv = {}, options: { webDir?: string } = {}) {
   const world = createWorld({ env });
-  const app = createApp({ config: world.config, ctx: world.ctx, clock: world.clock, log: silentLogger, backupEnv: world.backupEnv, webDir: options.webDir });
+  const { app } = testApp(world, { webDir: options.webDir });
   return { world, app };
 }
 
@@ -26,7 +26,7 @@ describe('HTTP: health and public config', () => {
     const { app } = setup();
     const res = await app.request('/healthz');
     expect(res.status).toBe(200);
-    expect(await res.json()).toMatchObject({ status: 'ok', version: '0.1.0', schemaVersion: 1, time: '2026-11-11T15:00:00Z' });
+    expect(await res.json()).toMatchObject({ status: 'ok', version: '0.1.0', schemaVersion: latestSchemaVersion(), time: '2026-11-11T15:00:00Z' });
   });
 
   it('sends security headers', async () => {
@@ -35,10 +35,11 @@ describe('HTTP: health and public config', () => {
     expect(res.headers.get('content-security-policy')).toContain("default-src 'self'");
     expect(res.headers.get('content-security-policy')).toContain("frame-ancestors 'none'");
     expect(res.headers.get('x-content-type-options')).toBe('nosniff');
+    expect(res.headers.get('referrer-policy')).toBe('same-origin');
   });
 
   it('GET /api/public-config tells the sign-in page whether demo sign-in exists', async () => {
-    expect(await (await setup().app.request('/api/public-config')).json()).toEqual({ appName: 'Subscriberr', version: '0.1.0', devFakeLogin: true, demoMode: true });
+    expect(await (await setup().app.request('/api/public-config')).json()).toEqual({ appName: 'Subscriberr', version: '0.1.0', devFakeLogin: true, demoMode: true, googleSignIn: true });
     const real = setup({ DEV_FAKE_LOGIN: 'false', SEED_DEMO: 'false', GOOGLE_CLIENT_ID: 'id', GOOGLE_CLIENT_SECRET: 'secret' });
     expect(await (await real.app.request('/api/public-config')).json()).toMatchObject({ devFakeLogin: false, demoMode: false });
   });
@@ -95,6 +96,7 @@ describe('HTTP: fake sign-in (demo mode) and sessions', () => {
     expect(world.db.prepare('SELECT count(*) AS n FROM accounts').get()).toEqual({ n: 1 });
     // An existing (allowlisted) operator can sign in.
     insertAccount(world.db, 'op@example.com', 'operator');
+    allowEmail(world.db, 'op@example.com');
     expect(await (await login(app, 'op@example.com')).res.json()).toMatchObject({ role: 'operator' });
   });
 
@@ -152,6 +154,7 @@ describe('HTTP: system', () => {
     expect(((await list.json()) as { items: unknown[] }).items).toHaveLength(1);
 
     insertAccount(world.db, 'op@example.com', 'operator');
+    allowEmail(world.db, 'op@example.com');
     const op = await login(app, 'op@example.com');
     expect((await app.request('/api/system/backups', { headers: { cookie: op.cookie } })).status).toBe(403);
     expect((await app.request('/api/system/backups', { method: 'POST', headers: { ...CSRF, cookie: op.cookie } })).status).toBe(403);
@@ -173,7 +176,7 @@ describe('HTTP: static web app', () => {
     mkdirSync(path.join(webDir, 'assets'), { recursive: true });
     writeFileSync(path.join(webDir, 'index.html'), '<!doctype html><title>Subscriberr</title>');
     writeFileSync(path.join(webDir, 'assets', 'app.js'), 'console.log(1)');
-    const app = createApp({ config: testConfig(world.dataDir, world.backupDir), ctx: world.ctx, clock: world.clock, log: silentLogger, backupEnv: world.backupEnv, webDir });
+    const { app } = testApp(world, { webDir, config: testConfig(world.dataDir, world.backupDir) });
 
     expect(await (await app.request('/')).text()).toContain('<title>Subscriberr</title>');
     expect(await (await app.request('/members/42')).text()).toContain('<title>Subscriberr</title>');

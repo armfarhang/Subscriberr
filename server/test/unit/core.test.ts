@@ -63,7 +63,7 @@ describe('dependency spike (Spec §18 M1)', () => {
     const results = await runSelfCheck();
     expect(results.filter((r) => !r.ok)).toEqual([]);
     expect(results.map((r) => r.name)).toEqual(['better-sqlite3', 'googleapis', 'mailparser', 'juice', 'nodemailer (MailComposer)', 'archiver + yauzl']);
-  });
+  }, 90_000); // importing googleapis is slow when the suite runs in parallel
 });
 
 describe('layout invariants (Spec §4.1)', () => {

@@ -1,10 +1,10 @@
 import type { Me, PublicConfig } from '@subscriberr/shared';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { FlaskConical, Menu, X } from 'lucide-react';
+import { AlertTriangle, FlaskConical, Menu, X } from 'lucide-react';
 import * as React from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { api } from '@/lib/api';
+import { api, googleStartUrl } from '@/lib/api';
 import { queryKeys } from '@/lib/query-keys';
 import { NAV_ITEMS } from './nav';
 import { Logo, Sidebar } from './sidebar';
@@ -42,14 +42,14 @@ export function Shell({ me, config }: { me: Me; config: PublicConfig }) {
       </a>
 
       <aside className="sticky top-0 hidden h-screen w-64 shrink-0 border-r lg:block">
-        <Sidebar me={me} onSignOut={() => signOut.mutate()} />
+        <Sidebar me={me} canSwitch={config.googleSignIn} onSignOut={() => signOut.mutate()} />
       </aside>
 
       {drawerOpen && (
         <div className="fixed inset-0 z-40 lg:hidden" role="dialog" aria-modal="true" aria-label="Navigation">
           <div className="absolute inset-0 bg-black/60" onClick={() => setDrawerOpen(false)} />
           <div className="absolute inset-y-0 left-0 w-72 max-w-[85vw] border-r shadow-xl">
-            <Sidebar me={me} onNavigate={() => setDrawerOpen(false)} onSignOut={() => signOut.mutate()} />
+            <Sidebar me={me} canSwitch={config.googleSignIn} onNavigate={() => setDrawerOpen(false)} onSignOut={() => signOut.mutate()} />
             <Button variant="ghost" size="icon" className="absolute right-2 top-3" onClick={() => setDrawerOpen(false)} aria-label="Close navigation">
               <X />
             </Button>
@@ -73,6 +73,21 @@ export function Shell({ me, config }: { me: Me; config: PublicConfig }) {
             <ThemeToggle />
           </div>
         </header>
+        {me.gmailStatus !== 'connected' && (
+          <div role="alert" className="flex flex-wrap items-center gap-3 border-b border-warning/40 bg-warning/10 px-4 py-2.5 text-sm">
+            <AlertTriangle className="h-4 w-4 shrink-0 text-warning" aria-hidden />
+            <span className="min-w-0 flex-1">
+              {me.gmailStatus === 'error'
+                ? 'Gmail credentials cannot be read. Scanning and sending are paused until you reconnect Google.'
+                : 'Gmail is disconnected. Scanning for e-Transfers and sending emails are paused until you reconnect.'}
+            </span>
+            {config.googleSignIn && (
+              <Button asChild size="sm" variant="outline">
+                <a href={googleStartUrl()}>Reconnect Google</a>
+              </Button>
+            )}
+          </div>
+        )}
         <main id="main" className="mx-auto w-full max-w-6xl flex-1 p-4 sm:p-6">
           <Outlet />
         </main>

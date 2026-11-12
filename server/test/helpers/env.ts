@@ -3,7 +3,11 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach } from 'vitest';
 import { type Config, loadConfig } from '../../src/config.js';
+import { createApp } from '../../src/app.js';
+import { createSecretBox } from '../../src/core/crypto.js';
 import { silentLogger } from '../../src/core/logger.js';
+import { FakeGoogleAuthProvider } from '../../src/modules/auth/fake-google.js';
+import type { GoogleAuthProvider } from '../../src/modules/auth/google.js';
 import { FakeClock, nowIso } from '../../src/core/time.js';
 import { createSystemContext, type SystemContext } from '../../src/core/workspace-context.js';
 import { openDatabase, type Sqlite } from '../../src/db/client.js';
@@ -48,7 +52,7 @@ export function insertAccount(db: Sqlite, email = 'owner@example.com', role: 'ow
   return Number(
     db
       .prepare(`INSERT INTO accounts (google_sub, email, role, created_at) VALUES (?, ?, ?, '2026-01-01T00:00:00Z')`)
-      .run(`sub:${email}`, email, role).lastInsertRowid,
+      .run(`fake:${email}`, email, role).lastInsertRowid,
   );
 }
 
@@ -109,4 +113,20 @@ export function createWorld(options: { start?: string; env?: NodeJS.ProcessEnv }
   const config = testConfig(dataDir, backupDir, options.env);
   const backupEnv: BackupEnv = { ctx, dbFile, workspacesDir, dataDir, backupDir, appVersion: 'test', timeZone: TEST_TZ, clock, log: silentLogger };
   return { root, dataDir, backupDir, dbFile, workspacesDir, db, ctx, clock, config, backupEnv };
+}
+
+/** Puts an email on the sign-in allowlist (owned by account 1 unless given). */
+export function allowEmail(db: Sqlite, email: string, ownerId = 1): void {
+  db.prepare(`INSERT INTO allowed_accounts (account_id, email, added_by, created_at) VALUES (?, ?, 'test', '2026-01-01T00:00:00Z')`).run(ownerId, email);
+}
+
+export const testSecretBox = () => createSecretBox(TEST_SECRET);
+
+/** The app wired like main.ts, with the in-process fake Google unless another provider is given. */
+export function testApp(world: TestWorld, options: { webDir?: string; google?: GoogleAuthProvider | null; config?: Config } = {}) {
+  const config = options.config ?? world.config;
+  const google = options.google === undefined ? new FakeGoogleAuthProvider(config.baseUrl, world.clock) : options.google;
+  const secretBox = testSecretBox();
+  const app = createApp({ config, ctx: world.ctx, clock: world.clock, log: silentLogger, secretBox, google, backupEnv: world.backupEnv, webDir: options.webDir });
+  return { app, google, secretBox, config };
 }

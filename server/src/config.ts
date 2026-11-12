@@ -1,5 +1,6 @@
 import { existsSync } from 'node:fs';
 import path from 'node:path';
+import { isValidTimeZone } from '@subscriberr/shared';
 import { z } from 'zod';
 
 const flag = z
@@ -10,7 +11,7 @@ const flag = z
 const envSchema = z.object({
   NODE_ENV: z.string().default('development'),
   BASE_URL: z.url().default('http://localhost:3000'),
-  TRUST_PROXY: flag,
+  TRUST_PROXY: z.string().optional(),
   GOOGLE_CLIENT_ID: z.string().default(''),
   GOOGLE_CLIENT_SECRET: z.string().default(''),
   APP_SECRET: z.string({ error: 'APP_SECRET is required' }).min(32, 'APP_SECRET must be at least 32 characters'),
@@ -29,7 +30,12 @@ export interface Config {
   isProduction: boolean;
   baseUrl: string;
   secureCookies: boolean;
+  /** True when behind a reverse proxy (NPM). */
   trustProxy: boolean;
+  /** Number of trusted proxy hops in X-Forwarded-For (TRUST_PROXY=true → 1). */
+  trustProxyHops: number;
+  /** The only OAuth redirect URI the app uses: BASE_URL + /auth/google/callback. */
+  googleRedirectUri: string;
   googleClientId: string;
   googleClientSecret: string;
   appSecret: string;
@@ -47,21 +53,21 @@ export interface Config {
 
 export class ConfigError extends Error {}
 
+/** TRUST_PROXY: false/empty → 0 hops, true → 1 hop (NPM), or an explicit hop count. null = invalid. */
+export function parseTrustProxy(value: string | undefined): number | null {
+  const v = (value ?? '').trim().toLowerCase();
+  if (['', 'false', '0', 'no'].includes(v)) return 0;
+  if (['true', 'yes'].includes(v)) return 1;
+  if (/^\d+$/.test(v) && Number(v) >= 1 && Number(v) <= 10) return Number(v);
+  return null;
+}
+
 const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]']);
 
 function isLocalhostUrl(url: string): boolean {
   try {
     const host = new URL(url).hostname;
     return LOCAL_HOSTS.has(host) || host.endsWith('.localhost');
-  } catch {
-    return false;
-  }
-}
-
-function isValidTimeZone(tz: string): boolean {
-  try {
-    new Intl.DateTimeFormat('en-CA', { timeZone: tz });
-    return true;
   } catch {
     return false;
   }
@@ -81,6 +87,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env, baseDir: string
   const isProduction = e.NODE_ENV === 'production';
   const problems: string[] = [];
 
+  const trustProxyHops = parseTrustProxy(e.TRUST_PROXY);
+  if (trustProxyHops === null) problems.push('TRUST_PROXY must be true, false or a number of proxy hops (1-10)');
   if (!isValidTimeZone(e.TZ)) problems.push(`TZ "${e.TZ}" is not a valid IANA timezone`);
 
   // Demo switches replace real Google/Gmail/media servers with fakes, so they must never be
@@ -110,7 +118,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env, baseDir: string
     isProduction,
     baseUrl,
     secureCookies: baseUrl.startsWith('https://'),
-    trustProxy: e.TRUST_PROXY,
+    trustProxy: (trustProxyHops ?? 0) > 0,
+    trustProxyHops: trustProxyHops ?? 0,
+    googleRedirectUri: `${baseUrl}/auth/google/callback`,
     googleClientId: e.GOOGLE_CLIENT_ID,
     googleClientSecret: e.GOOGLE_CLIENT_SECRET,
     appSecret: e.APP_SECRET,
