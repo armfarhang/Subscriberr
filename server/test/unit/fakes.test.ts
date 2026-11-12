@@ -86,11 +86,11 @@ describe('fake media servers (demo mode)', () => {
     expect(emails).not.toContain(plex.pendingInvites[0]!.email);
   });
 
-  it('fake:// servers exist only in demo mode and real adapters are not reachable yet', () => {
+  it('fake:// servers exist only in demo mode; real servers need their credentials', () => {
     const demo = createMediaProviderFactory({ seedDemo: true });
     const plex = demo({ id: 1, type: 'plex', baseUrl: 'fake://plex' });
     expect(demo({ id: 1, type: 'plex', baseUrl: 'fake://plex' })).toBe(plex);
     expect(() => createMediaProviderFactory({ seedDemo: false })({ id: 1, type: 'plex', baseUrl: 'fake://plex' })).toThrow(/demo mode/);
-    expect(() => demo({ id: 2, type: 'jellyfin', baseUrl: 'http://jellyfin.local:8096' })).toThrow(/Milestone 9/);
+    expect(() => demo({ id: 2, type: 'jellyfin', baseUrl: 'http://jellyfin.local:8096' })).toThrow(/no credentials/);
   });
 });

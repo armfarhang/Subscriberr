@@ -14,6 +14,8 @@ export const mediaServers = sqliteTable('media_servers', {
   lastCheckedAt: text('last_checked_at'),
   lastStatus: text('last_status'),
   createdAt: text('created_at').notNull(),
+  options: text('options', { mode: 'json' }).$type<Record<string, unknown>>().notNull().default({}),
+  enforcementConfirmed: integer('enforcement_confirmed', { mode: 'boolean' }).notNull().default(false),
 });
 
 export const memberServerAccounts = sqliteTable('member_server_accounts', {
@@ -29,4 +31,7 @@ export const memberServerAccounts = sqliteTable('member_server_accounts', {
   accessState: text('access_state').$type<AccessState>().notNull().default('unknown'),
   lastSyncedAt: text('last_synced_at'),
   lastError: text('last_error'),
+  syncPending: integer('sync_pending', { mode: 'boolean' }).notNull().default(false),
+  attempts: integer('attempts').notNull().default(0),
+  nextAttemptAt: text('next_attempt_at'),
 });

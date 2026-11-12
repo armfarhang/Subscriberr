@@ -34,9 +34,16 @@ export function memberRoutes(deps: AppDeps) {
 
   app.patch('/:id', jsonBody(updateMemberSchema), (c) => c.json(updateMember(workspaceOf(c), clock, actorOf(c), idParam(c.req.param('id')), c.req.valid('json'))));
 
-  app.post('/:id/status', jsonBody(memberStatusActionSchema), (c) =>
-    c.json(changeMemberStatus(workspaceOf(c), clock, actorOf(c), idParam(c.req.param('id')), c.req.valid('json').action)),
-  );
+  app.post('/:id/status', jsonBody(memberStatusActionSchema), (c) => {
+    const ws = workspaceOf(c);
+    const id = idParam(c.req.param('id'));
+    const before = getMemberDetail(ws, clock, id).status;
+    const after = changeMemberStatus(ws, clock, actorOf(c), id, c.req.valid('json').action);
+    // Manual changes (pause / archive / reactivate) reach the same listeners as billing ones:
+    // media access (archived → revoke, reactivated → grant) and the "access paused" email.
+    if (after.status !== before) deps.billingEvents?.statusChanged?.(ws, { memberId: id, from: before, to: after.status });
+    return c.json(after);
+  });
 
   app.delete('/:id', (c) => {
     deleteMember(workspaceOf(c), clock, actorOf(c), idParam(c.req.param('id')));

@@ -1,6 +1,8 @@
 import type { Logger } from './core/logger.js';
 import type { Clock } from './core/time.js';
-import type { WorkspaceContext } from './core/workspace-context.js';
+import type { SystemContext, WorkspaceContext } from './core/workspace-context.js';
+import type { MediaProviderFactory } from './modules/media/factory.js';
+import { mediaBillingEvents, processPendingSyncs, reconcileWorkspace } from './modules/media/sync.js';
 import { applyPayment, type BillingDeps, type BillingEvents, expirePendingDeposits, recomputeStatuses } from './modules/billing/ledger.js';
 import { emailBillingEvents, reminderStep } from './modules/email/automated.js';
 import type { PackEnv } from './modules/email/packs.js';
@@ -23,10 +25,30 @@ export interface ServiceInputs {
   clock: Clock;
   log: Logger;
   packs: PackEnv;
+  /** Media enforcement (M9): needs the database and the provider factory. */
+  ctx?: SystemContext;
+  media?: MediaProviderFactory;
+  /** Process media syncs right after a billing event (production); tests run them explicitly. */
+  autoSync?: boolean;
 }
 
 export function createServices(inputs: ServiceInputs): Services {
   const listeners: BillingEvents[] = [emailBillingEvents({ clock: inputs.clock, log: inputs.log, packs: inputs.packs })];
+  const syncDeps = inputs.media ? { clock: inputs.clock, media: inputs.media, log: inputs.log } : null;
+  if (syncDeps && inputs.ctx) {
+    const ctx = inputs.ctx;
+    let scheduled = false;
+    // Billing runs inside DB transactions; the server calls happen right after, outside them.
+    const kick = () => {
+      if (!inputs.autoSync || scheduled) return;
+      scheduled = true;
+      setTimeout(() => {
+        scheduled = false;
+        processPendingSyncs(ctx, syncDeps).catch((err: unknown) => inputs.log.error('media sync failed', { err }));
+      }, 50);
+    };
+    listeners.push(mediaBillingEvents(kick));
+  }
   const billingEvents: BillingEvents = {
     paymentApplied: (ws, e) => listeners.forEach((l) => l.paymentApplied?.(ws, e)),
     statusChanged: (ws, e) => listeners.forEach((l) => l.statusChanged?.(ws, e)),
@@ -51,6 +73,7 @@ export function createServices(inputs: ServiceInputs): Services {
       { name: 'expire-pending-deposits', run: (ws) => ({ expired: expirePendingDeposits(ws, inputs.clock) }) },
       { name: 'recompute-statuses', run: (ws) => recomputeStatuses(ws, billing) },
       reminderStep({ clock: inputs.clock, log: inputs.log, packs: inputs.packs }),
+      ...(syncDeps ? [{ name: 'media-reconcile', run: (ws: WorkspaceContext) => reconcileWorkspace(ws, syncDeps) }] : []),
     ],
   };
 }

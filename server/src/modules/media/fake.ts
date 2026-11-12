@@ -58,6 +58,11 @@ export class FakeMediaServer implements MediaServerProvider {
     return this.users.map((u) => ({ ...u }));
   }
 
+  async listPendingInvites(): Promise<Array<{ id: string; email: string }>> {
+    this.assertOnline();
+    return this.pendingInvites.map((p) => ({ ...p }));
+  }
+
   async listLibraries(): Promise<ExternalLibrary[]> {
     this.assertOnline();
     return this.libraries.map((l) => ({ ...l }));

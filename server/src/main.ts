@@ -16,6 +16,8 @@ import { createGoogleProviderForConfig } from './modules/auth/provider-factory.j
 import { registerCsvJobs } from './modules/csv/jobs.js';
 import { Scheduler } from './modules/jobs/scheduler.js';
 import { createMediaProviderFactory } from './modules/media/factory.js';
+import { registerMediaJobs } from './modules/media/jobs.js';
+import { credentialsResolver } from './modules/media/servers.js';
 import { createGmailClientFactory } from './modules/gmail/factory.js';
 import { registerPaymentJobs } from './modules/payments/jobs.js';
 import { registerDailyJob } from './modules/jobs/daily.js';
@@ -109,14 +111,15 @@ export async function serve(): Promise<void> {
   registerCsvJobs(scheduler, ctx, clock, config.timezone);
   const gmail = createGmailClientFactory(config, { ctx, secretBox });
   const packs = { builtinDir: DEFAULT_BUILTIN_DIR, workspacesDir: backupEnv.workspacesDir };
-  const services = createServices({ clock, log, packs });
+  const media = createMediaProviderFactory(config, { credentialsFor: credentialsResolver(ctx, secretBox) });
+  const services = createServices({ clock, log, packs, ctx, media, autoSync: true });
   const onPaymentStored = services.onPaymentStored;
   registerPaymentJobs(scheduler, ctx, { clock, log, gmail, onStored: onPaymentStored }, config.timezone);
   registerDailyJob(scheduler, ctx, clock, log, services.dailySteps, config.timezone);
   registerEmailJobs(scheduler, ctx, { clock, log, gmail }, config.timezone);
+  registerMediaJobs(scheduler, ctx, { clock, log, media }, config.timezone);
   scheduler.start();
 
-  const media = createMediaProviderFactory(config);
   const app = createApp({ config, ctx, clock, log, secretBox, google, backupEnv, scheduler, media, gmail, onPaymentStored, billingEvents: services.billingEvents, packs, webDir: WEB_DIR });
   const server = serveHttp({ fetch: app.fetch, port: config.port, hostname: '0.0.0.0' }, (info) => {
     log.info(`${APP_NAME} ${APP_VERSION} listening`, { port: info.port, baseUrl: config.baseUrl, dataDir: config.dataDir, backupDir: config.backupDir });

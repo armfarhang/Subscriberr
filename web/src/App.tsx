@@ -18,6 +18,7 @@ import { PaymentsPage } from '@/modules/payments/payments-page';
 import { EmailsPage } from '@/modules/emails/emails-page';
 import { TemplatesPage } from '@/modules/templates/templates-page';
 import { AnnouncementsPage } from '@/modules/announcements/announcements-page';
+import { ServersPage } from '@/modules/media/servers-page';
 import { SettingsPage } from '@/modules/settings/settings-page';
 import { SystemPage } from '@/modules/system/system-page';
 
@@ -76,6 +77,7 @@ export function App() {
         <Route path="emails" element={<EmailsPage timeZone={account.timezone} />} />
         <Route path="templates" element={<TemplatesPage />} />
         <Route path="announcements" element={<AnnouncementsPage timeZone={account.timezone} />} />
+        <Route path="media" element={<ServersPage timeZone={account.timezone} />} />
         <Route path="import-export" element={<ImportExportPage />} />
         <Route path="import-export/:id" element={<ImportWizardPage />} />
         <Route path="system" element={<SystemPage me={account} />} />

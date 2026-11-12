@@ -16,6 +16,7 @@ import { FakeGoogleAuthProvider, fakeGoogleRoutes } from './modules/auth/fake-go
 import { authRoutes } from './modules/auth/routes.js';
 import { csvRoutes } from './modules/csv/routes.js';
 import { memberRoutes } from './modules/members/routes.js';
+import { mediaRoutes } from './modules/media/routes.js';
 import { paymentRoutes } from './modules/payments/routes.js';
 import { billingRoutes } from './modules/billing/routes.js';
 import { announcementRoutes, emailRoutes, templateRoutes } from './modules/email/routes.js';
@@ -107,6 +108,7 @@ export function createApp(deps: AppDeps) {
   app.route('/api/email', emailRoutes(deps));
   app.route('/api/templates', templateRoutes(deps));
   app.route('/api/announcements', announcementRoutes(deps));
+  app.route('/api/media', mediaRoutes(deps));
   app.route('/api/allowlist', allowlistRoutes(deps));
   app.route('/api/system', systemRoutes(deps));
 

@@ -128,5 +128,24 @@ Needs real Google sign-in (Milestone 2 checklist) with `SEED_DEMO=false`.
       whose email is yours), check it in your inbox, then send the real one. Each member gets their own
       copy (no shared To/CC). A large announcement continues the next day(s) on its own; the Emails page
       shows how much of the daily limit is used.
-- [ ] **M9:** verify Plex **empty-library revoke** behaviour and the Plex endpoints; verify
-      Jellyfin policy changes.
+- [ ] **M9 Jellyfin:** Jellyfin Dashboard → API Keys → create one for Subscriberr. Servers → Add server
+      (address like `http://<unraid-ip>:8096`) → **Test connection** shows the server name and version.
+      Users and libraries appear; administrators are marked "Admin (never changed)".
+- [ ] **M9 Plex:** find your Plex token (Plex Web → any item → ⋯ → Get Info → View XML → `X-Plex-Token=`
+      in the address). Add the server (`http://<unraid-ip>:32400`) → **Test connection** (it learns the
+      machine id). Check that friends who **accepted** your share are listed as users, that open
+      invitations show as "Invitation pending", and that libraries are listed.
+- [ ] **M9:** choose the **default libraries** of each server, then link each member to their account
+      (member page → Media servers → Link).
+- [ ] **M9 test member first:** link a test account (a second Plex / Jellyfin user you own), turn on
+      **Enforce access**, press **Preview changes (dry run)** and read the plan carefully. Only then
+      **Apply**. Every later change happens automatically.
+- [ ] **M9 Plex empty-library revoke (important, unverified):** with the test account expired, apply the
+      plan: in Plex Web → Settings → Manage Library Access the test user should still be listed as a
+      friend/share but with **no libraries**. If Plex refuses (Servers page shows "Plex refused the
+      library change"), report it: the app does not remove the share on its own.
+- [ ] **M9:** record a payment for the test member → within a minute the libraries come back (same set).
+      Archive the member → access is removed. Pause → nothing changes.
+- [ ] **M9 Jellyfin:** after a revoke, the user's Policy shows "Enable access to all libraries" off and no
+      library ticked. Optionally test "Also disable the user" and "Stop their streams" on the test account.
+- [ ] **M9:** your own admin/owner account never changes (it is never even offered for linking).

@@ -13,7 +13,8 @@ import { createSystemContext, type SystemContext } from '../../src/core/workspac
 import { openDatabase, type Sqlite } from '../../src/db/client.js';
 import { migrate } from '../../src/db/migrate.js';
 import type { BackupEnv } from '../../src/modules/system/backup.js';
-import { createMediaProviderFactory } from '../../src/modules/media/factory.js';
+import { createMediaProviderFactory, type MediaProviderFactory } from '../../src/modules/media/factory.js';
+import { credentialsResolver } from '../../src/modules/media/servers.js';
 import { createGmailClientFactory, type GmailClientFactory } from '../../src/modules/gmail/factory.js';
 import type { AppDeps } from '../../src/http/types.js';
 import { createServices } from '../../src/wiring.js';
@@ -128,12 +129,13 @@ export function allowEmail(db: Sqlite, email: string, ownerId = 1): void {
 export const testSecretBox = () => createSecretBox(TEST_SECRET);
 
 /** The app wired like main.ts, with the in-process fake Google unless another provider is given. */
-export function testApp(world: TestWorld, options: { webDir?: string; google?: GoogleAuthProvider | null; config?: Config; gmail?: GmailClientFactory; onPaymentStored?: AppDeps['onPaymentStored'] } = {}) {
+export function testApp(world: TestWorld, options: { webDir?: string; google?: GoogleAuthProvider | null; config?: Config; gmail?: GmailClientFactory; onPaymentStored?: AppDeps['onPaymentStored']; media?: MediaProviderFactory } = {}) {
   const config = options.config ?? world.config;
   const google = options.google === undefined ? new FakeGoogleAuthProvider(config.baseUrl, world.clock) : options.google;
   const secretBox = testSecretBox();
   const packs = { builtinDir: DEFAULT_BUILTIN_DIR, workspacesDir: world.workspacesDir };
-  const services = createServices({ clock: world.clock, log: silentLogger, packs });
-  const app = createApp({ config, ctx: world.ctx, clock: world.clock, log: silentLogger, secretBox, google, backupEnv: world.backupEnv, webDir: options.webDir, media: createMediaProviderFactory(config), gmail: options.gmail ?? createGmailClientFactory(config), onPaymentStored: options.onPaymentStored ?? services.onPaymentStored, billingEvents: services.billingEvents, packs, emailThrottleMs: 0 });
-  return { app, google, secretBox, config, services };
+  const media = options.media ?? createMediaProviderFactory(config, { credentialsFor: credentialsResolver(world.ctx, secretBox) });
+  const services = createServices({ clock: world.clock, log: silentLogger, packs, ctx: world.ctx, media });
+  const app = createApp({ config, ctx: world.ctx, clock: world.clock, log: silentLogger, secretBox, google, backupEnv: world.backupEnv, webDir: options.webDir, media, gmail: options.gmail ?? createGmailClientFactory(config), onPaymentStored: options.onPaymentStored ?? services.onPaymentStored, billingEvents: services.billingEvents, packs, emailThrottleMs: 0 });
+  return { app, google, secretBox, config, services, media };
 }

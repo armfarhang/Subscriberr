@@ -59,6 +59,40 @@ export function describeEvent(e: TimelineEvent): string {
       return `Media-server link put back as before${fromImport(d)}`;
     case 'member.deleted':
       return 'Member deleted';
+    case 'ledger.manual_adjust':
+      return `Balance adjusted${d.days ? `: ${Number(d.days) > 0 ? '+' : ''}${String(d.days)} day(s)` : ''}${d.creditCents ? `, credit ${formatCents(Number(d.creditCents))}` : ''}${d.note ? ` (${String(d.note)})` : ''}`;
+    case 'payment.received':
+      return `e-Transfer received${typeof d.amountCents === 'number' ? `: ${formatCents(d.amountCents)}` : ''}${d.matchedBy ? ` (matched by ${String(d.matchedBy)})` : ''}`;
+    case 'payment.applied':
+      return `Payment applied${typeof d.amountCents === 'number' ? `: ${formatCents(d.amountCents)}` : ''} → ${Number(d.periods) > 0 ? `${String(d.periods)} period(s), paid through ${String(d.paidThroughAfter)}` : 'not enough for a period, held as credit'}`;
+    case 'payment.assigned':
+      return `Payment assigned from the Review Queue${typeof d.amountCents === 'number' ? `: ${formatCents(d.amountCents)}` : ''}`;
+    case 'payment.rematched':
+      return 'Payment matched after re-running the rules';
+    case 'payment.recorded':
+      return `Payment recorded by hand: ${formatCents(Number(d.amountCents))}${d.note ? ` (${String(d.note)})` : ''}`;
+    case 'payment.voided':
+      return `Payment voided: ${String(d.reason ?? '')}`;
+    case 'payment.deposited':
+      return `Transfer marked as deposited: ${formatCents(Number(d.amountCents))}`;
+    case 'payment.deposit_expired':
+      return `Transfer awaiting deposit expired (${String(d.expiresOn ?? '')})`;
+    case 'email.sent':
+      return `Email sent: ${String(d.subject ?? d.kind ?? '')}`;
+    case 'member.access_granted':
+      return `Access given on ${String(d.server ?? 'a server')}`;
+    case 'member.access_revoked':
+      return `Access removed on ${String(d.server ?? 'a server')}`;
+    case 'member.access_failed':
+      return `Could not ${d.action === 'revoke' ? 'remove' : 'change'} access on ${String(d.server ?? 'a server')}: ${String(d.error ?? '')}`;
+    case 'member.libraries_changed':
+      return d.libraryIds ? 'Libraries chosen for this member' : 'Libraries reset to the server default';
+    case 'member.server_unlinked':
+      return `Unlinked from a server account (${String(d.username ?? '')})`;
+    case 'rule.created':
+    case 'rule.updated':
+    case 'rule.deleted':
+      return `Matching rule ${e.action.split('.')[1]}: ${String(d.label ?? '')}`;
     case 'member.alias_removed':
       return `${d.kind === 'email' ? 'Email' : 'Name'} alias removed: ${String(d.value)}`;
     default:

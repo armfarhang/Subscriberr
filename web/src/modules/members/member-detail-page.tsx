@@ -11,7 +11,7 @@ import { api, ApiRequestError } from '@/lib/api';
 import { formatDateTime } from '@/lib/format';
 import { queryKeys } from '@/lib/query-keys';
 import { EmailAndNotesFields, focusFirstError, formFromMember, formToPayload, IdentityFields, type MemberFormErrors, type MemberFormState, PlanFields, serverErrors } from './member-form';
-import { accessStateLabel } from './server-chips';
+import { ServersCard } from '@/modules/media/member-servers-card';
 import { STATUS_LABEL, StatusBadge } from './status';
 import { Timeline } from './timeline';
 import { BalanceCard } from '@/modules/billing/balance-card';
@@ -70,7 +70,7 @@ export function MemberDetailPage() {
       <Card>
         <CardHeader>
           <CardTitle>Timeline</CardTitle>
-          <CardDescription>Everything that happened to this member. Payments, emails and access changes appear here once those features exist.</CardDescription>
+          <CardDescription>Everything that happened to this member: changes, payments, emails and media access.</CardDescription>
         </CardHeader>
         <CardContent>
           <Timeline events={m.timeline} timeZone={settings.data.timezone} />
@@ -423,32 +423,3 @@ function PaymentsCard({ member: m, timeZone }: { member: MemberDetail; timeZone:
   );
 }
 
-function ServersCard({ member: m, timeZone }: { member: MemberDetail; timeZone: string }) {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Media servers</CardTitle>
-        <CardDescription>Linked Plex / Jellyfin accounts. Linking and library choices arrive with server integration.</CardDescription>
-      </CardHeader>
-      <CardContent>
-        {m.servers.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Not linked to any server.</p>
-        ) : (
-          <ul className="space-y-2 text-sm">
-            {m.servers.map((s) => (
-              <li key={s.serverId} className="rounded-md border px-3 py-2">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="font-medium">{s.serverName}</span>
-                  <Badge variant={s.accessState === 'granted' ? 'success' : s.accessState === 'revoked' ? 'destructive' : s.accessState === 'error' ? 'warning' : 'neutral'}>{accessStateLabel(s.accessState)}</Badge>
-                </div>
-                <div className="text-xs text-muted-foreground">
-                  {s.serverType === 'plex' ? 'Plex' : 'Jellyfin'} user {s.externalUsername ?? '—'} · last synced {s.lastSyncedAt ? formatDateTime(s.lastSyncedAt, timeZone) : 'never'}
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </CardContent>
-    </Card>
-  );
-}

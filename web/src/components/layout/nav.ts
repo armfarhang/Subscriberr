@@ -53,7 +53,7 @@ export const NAV: NavGroup[] = [
   {
     label: 'Administration',
     items: [
-      { to: '/media', label: 'Servers', icon: Server, milestone: 9, description: 'Plex and Jellyfin servers, libraries and enforcement.' },
+      { to: '/media', label: 'Servers', icon: Server, description: 'Plex and Jellyfin servers, libraries and enforcement.' },
       { to: '/settings', label: 'Settings', icon: Settings },
       { to: '/system', label: 'System', icon: Activity },
     ],

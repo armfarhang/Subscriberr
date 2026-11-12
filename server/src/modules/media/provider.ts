@@ -11,6 +11,12 @@ export interface ExternalUser {
   isAdmin: boolean;
 }
 
+/** An invitation that was not accepted yet (Plex): shown as pending, never linkable (§10.3). */
+export interface PendingInvite {
+  id: string;
+  email: string;
+}
+
 export interface ExternalLibrary {
   id: string;
   name: string;
@@ -25,6 +31,8 @@ export interface MediaServerProvider {
   testConnection(): Promise<Result>;
   /** Only linkable (accepted/active) users. */
   listUsers(): Promise<ExternalUser[]>;
+  /** Plex only: invitations that were not accepted yet. */
+  listPendingInvites?(): Promise<PendingInvite[]>;
   listLibraries(): Promise<ExternalLibrary[]>;
   getAccess(user: ExternalUser): Promise<AccessSnapshot>;
   grantAccess(user: ExternalUser, libraryIds: string[]): Promise<void>;

@@ -113,7 +113,8 @@ function WizardBody({ me, config, settings }: { me: Me; config: PublicConfig; se
               <div className="space-y-1">
                 <p className="font-medium">Plex and Jellyfin are added on the Servers page.</p>
                 <p className="text-muted-foreground">
-                  Server linking and access enforcement arrive in a later version of this build. You can finish setup now and add servers when that page is ready.
+                  After this setup, open <strong>Servers</strong> to add your Plex or Jellyfin server (address + token / API key), choose the default libraries, then link each member to their account. Access is
+                  only enforced once you turn it on and approve the first dry run.
                 </p>
               </div>
             </div>
