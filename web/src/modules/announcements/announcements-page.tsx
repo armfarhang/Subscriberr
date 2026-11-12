@@ -2,6 +2,7 @@ import { type Audience, type AnnouncementDraft, type AnnouncementView, MEMBER_ST
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Bold, Italic, Link2, List, Plus, Send, Trash2, X } from 'lucide-react';
 import * as React from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { MemberPicker } from '@/components/member-picker';
 import { Badge, type BadgeProps } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -18,9 +19,18 @@ const STATUS_VARIANT: Record<AnnouncementView['status'], BadgeProps['variant']> 
 /** Announcements (Spec §9.4): composer, audience, preview, confirm, progress and history. */
 export function AnnouncementsPage({ timeZone }: { timeZone: string }) {
   const list = useQuery({ queryKey: KEY, queryFn: api.announcements, refetchInterval: 30_000 });
-  const [editing, setEditing] = React.useState<AnnouncementView | 'new' | null>(null);
+  // Members list → "Announcement to selected" arrives with the picked members in the router state.
+  const location = useLocation();
+  const navigate = useNavigate();
+  const fromList = (location.state as { picked?: Picked[] } | null)?.picked;
+  const [prefill] = React.useState<Picked[] | null>(fromList && fromList.length > 0 ? fromList : null);
+  React.useEffect(() => {
+    if (fromList) navigate('.', { replace: true, state: null });
+  }, [fromList, navigate]);
+  const [editing, setEditing] = React.useState<AnnouncementView | 'new' | null>(prefill ? 'new' : null);
   const [viewing, setViewing] = React.useState<number | null>(null);
-  if (editing) return <Composer initial={editing === 'new' ? null : editing} defaultFooter={list.data?.footer ?? ''} onClose={() => setEditing(null)} />;
+  if (editing)
+    return <Composer initial={editing === 'new' ? null : editing} picked={editing === 'new' ? prefill : null} defaultFooter={list.data?.footer ?? ''} onClose={() => setEditing(null)} />;
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center gap-3">
@@ -156,10 +166,12 @@ const AUDIENCE_LABEL: Record<AudienceType, string> = {
   picked: 'Hand-picked members',
 };
 
-function AudienceForm({ audience, onChange }: { audience: Audience; onChange: (a: Audience) => void }) {
+type Picked = { id: number; name: string };
+
+function AudienceForm({ audience, onChange, initialPicked }: { audience: Audience; onChange: (a: Audience) => void; initialPicked?: Picked[] | null }) {
   const servers = useQuery({ queryKey: ['media', 'servers'], queryFn: api.servers, retry: false });
   const [picking, setPicking] = React.useState(false);
-  const [picked, setPicked] = React.useState<Array<{ id: number; name: string }>>([]);
+  const [picked, setPicked] = React.useState<Picked[]>(initialPicked ?? []);
   const types = (Object.keys(AUDIENCE_LABEL) as AudienceType[]).filter((t) => t !== 'server' || (servers.data?.items.length ?? 0) > 0);
   const setType = (type: AudienceType) => {
     if (type === 'status') onChange({ type, statuses: ['active', 'grace'] });
@@ -250,13 +262,13 @@ function AudienceForm({ audience, onChange }: { audience: Audience; onChange: (a
   );
 }
 
-function Composer({ initial, defaultFooter, onClose }: { initial: AnnouncementView | null; defaultFooter: string; onClose: () => void }) {
+function Composer({ initial, picked, defaultFooter, onClose }: { initial: AnnouncementView | null; picked?: Picked[] | null; defaultFooter: string; onClose: () => void }) {
   const queryClient = useQueryClient();
   const [id, setId] = React.useState<number | null>(initial?.id ?? null);
   const [subject, setSubject] = React.useState(initial?.subject ?? '');
   const [body, setBody] = React.useState(initial?.body ?? '');
   const [footer, setFooter] = React.useState(initial?.footer ?? defaultFooter.replace(/<[^>]+>/g, ''));
-  const [audience, setAudience] = React.useState<Audience>(initial?.audience ?? { type: 'active' });
+  const [audience, setAudience] = React.useState<Audience>(initial?.audience ?? (picked ? { type: 'picked', memberIds: picked.map((p) => p.id) } : { type: 'active' }));
   const [confirming, setConfirming] = React.useState(false);
   const draft: AnnouncementDraft = { subject, body, audience, footer: footer.trim() ? `<p>${footer.trim().replace(/[<>&]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' })[c]!)}</p>` : '' };
   const validAudience = !(audience.type === 'picked' && audience.memberIds.includes(0));
@@ -332,7 +344,7 @@ function Composer({ initial, defaultFooter, onClose }: { initial: AnnouncementVi
               <CardTitle>Audience</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <AudienceForm audience={audience} onChange={setAudience} />
+              <AudienceForm audience={audience} onChange={setAudience} initialPicked={picked} />
               {recipients.data && (
                 <details className="text-sm">
                   <summary className="cursor-pointer">

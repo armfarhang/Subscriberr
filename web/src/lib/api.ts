@@ -4,6 +4,9 @@ import type {
   BackupRetention,
   BackupRun,
   CreateMember,
+  Dashboard,
+  JobInfo,
+  LogLine,
   Me,
   MemberDetail,
   MemberList,
@@ -245,6 +248,13 @@ export const api = {
   systemStatus: () => request<SystemStatus>('/api/system/status'),
   backups: () => request<{ items: BackupRun[] }>('/api/system/backups'),
   backupNow: () => send<{ run: BackupRun }>('POST', '/api/system/backups'),
+  /** Plain link (the browser downloads it with the session cookie). */
+  backupDownloadUrl: (id: number) => `/api/system/backups/${id}/download`,
+  jobs: () => request<{ items: JobInfo[] }>('/api/system/jobs'),
+  runJob: (name: string) => send<{ id: number; status: 'ok' | 'error' | 'skipped'; error?: string; stats?: Record<string, unknown> }>('POST', `/api/system/jobs/${encodeURIComponent(name)}/run`),
+  logs: (level: 'debug' | 'info' | 'warn' | 'error') => request<{ items: LogLine[] }>(`/api/system/logs?level=${level}`),
+  dashboard: () => request<Dashboard>('/api/dashboard'),
+  sendReminder: (memberId: number) => send<{ queued: boolean; reason?: string }>('POST', `/api/email/members/${memberId}/remind`),
   backupRetention: () => request<BackupRetention>('/api/system/backup-retention'),
   setBackupRetention: (value: BackupRetention) => send<BackupRetention>('PUT', '/api/system/backup-retention', value),
 };

@@ -8,8 +8,29 @@ access, and sends reminders and confirmations from the same Gmail account.
 `Spec.md` is the single source of truth. `PROGRESS.md` tracks what is built so far, and
 `docs/OWNER_CHECKLIST.md` lists what only the owner can verify with real accounts.
 
-> **Status:** Milestones 1 (Foundation) and 2 (Auth & workspaces) are complete. Members,
-> payments, email and media-server enforcement arrive in milestones 3–10.
+> **Status:** v1 is feature-complete (all ten milestones of the spec). It has been built and
+> tested in demo mode only; the steps that need your real Google, Gmail, Plex and Jellyfin
+> accounts are in `docs/OWNER_CHECKLIST.md`.
+
+## What it does
+
+- **Members:** a friendly display name, the name their e-Transfers arrive under (plus aliases),
+  email, notes and a plan (amount / period / tolerance / grace; workspace defaults with
+  per-member overrides). Search, filters, quick actions (record payment, send reminder, extend,
+  pause) and bulk select → announcement. **Ctrl/⌘-K** jumps to any member.
+- **Payments:** scans Gmail for Interac e-Transfer notices, checks they are genuine (Gmail's DKIM /
+  DMARC verdict), matches them to a member (name, email, memo rules) and applies them. Anything
+  doubtful waits in the **Review Queue**; transfers you still have to deposit wait in **Awaiting
+  deposit**. Nothing is applied twice.
+- **Billing:** a ledger of payments and corrections; the paid-through date, credit and status
+  (active → grace → expired; paused, archived) are always replayable from it.
+- **Emails:** thank-you, deficit, reminders and "access paused" emails, plus announcements, sent
+  from your Gmail through a queue with a daily cap, in a template pack you can edit (live preview).
+- **Plex and Jellyfin:** link each member to their existing account; a payment gives the
+  libraries back, an expired or archived member loses them. The first sync is always a reviewed
+  dry run, and admin accounts are never touched.
+- **Safety:** nightly verified backups to a second disk, a nightly integrity + ledger check,
+  CSV import with a side-by-side review and undo, CLI-only restore.
 
 ## Run it locally (demo mode — no real accounts needed)
 
@@ -49,7 +70,12 @@ contacts real Google, even if Google credentials are set.
 | `npm run build` | Build shared, server and web |
 | `npm start` | Run the built server (serves the built web app) |
 | `npm test` | Vitest: unit + integration |
+| `npm run e2e` | Build, then run the Playwright suite against the built app in demo mode |
 | `npm run lint` / `npm run typecheck` | ESLint / TypeScript for all workspaces |
+
+`npm run e2e` starts its own demo server on port 3210 with a temporary data folder (it never
+reads your `.env`). On Windows it uses Microsoft Edge; elsewhere run
+`npx playwright install chromium` once (or set `E2E_CHANNEL=chrome`).
 
 ## Configuration
 
@@ -145,6 +171,28 @@ on the LAN port.
 
 `GET /healthz` is unauthenticated and backs the image's `HEALTHCHECK`.
 
+### Unraid
+
+`deploy/unraid/subscriberr.xml` is a Docker template with both volumes and every variable:
+
+1. On the Unraid box, in a clone of this repository: `docker build -t subscriberr .`
+2. Copy the template to `/boot/config/plugins/dockerMan/templates-user/my-subscriberr.xml`.
+3. Docker → **Add Container** → Template **subscriberr**. Set `APP_SECRET`, the Google client
+   id / secret and `ADMIN_EMAILS`; keep **Network** = your NPM network (default `npm_default`).
+4. Check the two paths: **Data** `/mnt/user/appdata/subscriberr` and **Backups**
+   `/mnt/user/backups/subscriberr`, on a different disk/share than appdata.
+5. Add the NPM proxy host (above), open the `https://` address and sign in with Google.
+
+## Using it day to day
+
+- **Dashboard:** who is active, due within a week, in grace or expired; payments this month;
+  the Review Queue; Gmail, last scan and email-queue health; backup health.
+- **System** (Owner): backups (Back up now, Download with a privacy warning), the integrity
+  check, jobs with **Run now**, recent errors and the log tail, and *Rescan mailbox from date*.
+- **Settings:** *Payments*, *Member defaults*, *Gmail scanning*, *Allowed Google accounts*,
+  *Backup retention*, *Google account*. **Emails → Email settings:** From name, daily cap, dry run,
+  reminder days.
+
 ## Backups and restore
 
 - **Nightly at 03:00** (server timezone) the app takes a consistent online snapshot and writes one
@@ -153,9 +201,10 @@ on the LAN port.
 - **Every backup is verified immediately** (unzip, checksum, `PRAGMA integrity_check`, row
   counts). A backup that fails is flagged, kept for inspection and not counted.
 - **Retention:** 2 daily, 4 weekly, 6 monthly. Safety snapshots are taken automatically before
-  every database migration (and, later, before every CSV import); the newest 3 of each kind are
+  every database migration and every CSV import; the newest 3 of each kind are
   kept. The newest verified backup is never deleted.
-- **Back up now** is on the System page (Owner only).
+- **Back up now** and **Download** are on the System page (Owner only). The download shows a
+  privacy warning first: the zip is unencrypted and contains every workspace.
 - Backups contain member names, emails and notes and are **not encrypted**. Include `/backups` in
   your off-box backup.
 

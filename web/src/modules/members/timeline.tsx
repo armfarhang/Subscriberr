@@ -77,6 +77,8 @@ export function describeEvent(e: TimelineEvent): string {
       return `Transfer marked as deposited: ${formatCents(Number(d.amountCents))}`;
     case 'payment.deposit_expired':
       return `Transfer awaiting deposit expired (${String(d.expiresOn ?? '')})`;
+    case 'email.reminder_requested':
+      return 'Reminder sent by hand (quick action)';
     case 'email.sent':
       return `Email sent: ${String(d.subject ?? d.kind ?? '')}`;
     case 'member.access_granted':

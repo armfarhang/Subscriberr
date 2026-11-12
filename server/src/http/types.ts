@@ -1,6 +1,6 @@
 import type { Config } from '../config.js';
 import type { SecretBox } from '../core/crypto.js';
-import type { Logger } from '../core/logger.js';
+import type { LogBuffer, Logger } from '../core/logger.js';
 import type { Clock } from '../core/time.js';
 import type { SystemContext, WorkspaceContext } from '../core/workspace-context.js';
 import type { AccountRecord } from '../modules/auth/accounts.js';
@@ -35,6 +35,8 @@ export interface AppDeps {
   emailThrottleMs?: number;
   /** Called when a payment becomes applicable (wired to billing in main.ts / tests). */
   onPaymentStored?: (ws: WorkspaceContext, paymentId: number, opts: { rescan: boolean; receivedAt: string }) => void;
+  /** Recent log lines for the System page (Owner only). */
+  logBuffer?: LogBuffer;
   /** Directory with the built web app (web/dist). Omitted → API only. */
   webDir?: string;
 }

@@ -1,6 +1,6 @@
 import { MEMBER_LIST_FILTERS, MEMBER_SORTS, type MemberListFilter, type MemberSort, type MemberSummary } from '@subscriberr/shared';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, Download, Plus, Search, Upload, Users } from 'lucide-react';
+import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, Download, Megaphone, Plus, Search, Upload, Users, X } from 'lucide-react';
 import * as React from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -9,6 +9,7 @@ import { Input, Select } from '@/components/ui/input';
 import { api } from '@/lib/api';
 import { queryKeys } from '@/lib/query-keys';
 import { cn } from '@/lib/utils';
+import { QuickActions } from './quick-actions';
 import { ServerChips } from './server-chips';
 import { DueCell, planLabel, STATUS_LABEL, StatusBadge } from './status';
 
@@ -22,8 +23,20 @@ function oneOf<T extends string>(values: readonly T[], raw: string | null, fallb
 }
 
 /** Members screen (Spec §13.1 #3): search, status filter, sort, table on desktop and cards on phones. */
-export function MembersPage() {
+export function MembersPage({ timeZone }: { timeZone: string }) {
   const [params, setParams] = useSearchParams();
+  const navigate = useNavigate();
+  // Bulk selection (kept across pages and filters) → announcement to the picked members.
+  const [selected, setSelected] = React.useState<Map<number, string>>(new Map());
+  const [notice, setNotice] = React.useState<{ text: string; ok: boolean } | null>(null);
+  const toggle = (m: MemberSummary, on: boolean) =>
+    setSelected((prev) => {
+      const next = new Map(prev);
+      if (on) next.set(m.id, m.displayName);
+      else next.delete(m.id);
+      return next;
+    });
+  const onResult = (text: string, ok: boolean) => setNotice({ text, ok });
   const status = oneOf(MEMBER_LIST_FILTERS, params.get('status'), 'current');
   const sort = oneOf(MEMBER_SORTS, params.get('sort'), 'name');
   const dir = params.get('dir') === 'desc' ? 'desc' : 'asc';
@@ -130,13 +143,33 @@ export function MembersPage() {
         })}
       </div>
 
+      {selected.size > 0 && (
+        <div className="sticky top-16 z-20 flex flex-wrap items-center gap-2 rounded-lg border border-primary/40 bg-card px-3 py-2 text-sm shadow-sm" role="region" aria-label="Selected members">
+          <span className="font-medium">{selected.size} selected</span>
+          <Button size="sm" className="h-8" onClick={() => navigate('/announcements', { state: { picked: [...selected].map(([id, name]) => ({ id, name })) } })}>
+            <Megaphone /> Announcement to selected
+          </Button>
+          <Button size="sm" variant="ghost" className="h-8" onClick={() => setSelected(new Map())}>
+            <X /> Clear
+          </Button>
+        </div>
+      )}
+      {notice && (
+        <p role="status" className={cn('flex items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm', notice.ok ? 'border-success/40 text-success' : 'border-destructive/50 text-destructive')}>
+          {notice.text}
+          <button type="button" aria-label="Dismiss" className="text-muted-foreground hover:text-foreground" onClick={() => setNotice(null)}>
+            <X className="h-4 w-4" />
+          </button>
+        </p>
+      )}
+
       {list.isPending && <div className="h-48 animate-pulse rounded-lg bg-muted" />}
       {list.isError && <p className="text-sm text-destructive">Could not load members: {list.error.message}</p>}
       {data && data.items.length === 0 && <EmptyState filtered={Boolean(q) || status !== 'current'} hasAny={allCount > 0} />}
       {data && data.items.length > 0 && (
         <>
-          <MemberTable items={data.items} />
-          <MemberCards items={data.items} />
+          <MemberTable items={data.items} selected={selected} onToggle={toggle} timeZone={timeZone} onResult={onResult} />
+          <MemberCards items={data.items} selected={selected} onToggle={toggle} timeZone={timeZone} onResult={onResult} />
           <div className="flex items-center justify-between gap-2 text-sm text-muted-foreground">
             <span>
               {data.total} member{data.total === 1 ? '' : 's'}
@@ -186,23 +219,41 @@ function EmptyState({ filtered, hasAny }: { filtered: boolean; hasAny: boolean }
   );
 }
 
-function MemberTable({ items }: { items: MemberSummary[] }) {
+interface RowProps {
+  items: MemberSummary[];
+  selected: Map<number, string>;
+  onToggle: (m: MemberSummary, on: boolean) => void;
+  timeZone: string;
+  onResult: (text: string, ok: boolean) => void;
+}
+
+function MemberTable({ items, selected, onToggle, timeZone, onResult }: RowProps) {
   const navigate = useNavigate();
+  const allOnPage = items.every((m) => selected.has(m.id));
   return (
     <div className="hidden overflow-x-auto rounded-lg border md:block">
       <table className="w-full text-sm">
         <thead className="bg-muted/50 text-left text-xs uppercase tracking-wide text-muted-foreground">
           <tr>
+            <th scope="col" className="w-8 py-2.5 pl-3">
+              <input type="checkbox" className="h-4 w-4 align-middle" aria-label="Select all members on this page" checked={allOnPage} onChange={(e) => items.forEach((m) => onToggle(m, e.target.checked))} />
+            </th>
             <th scope="col" className="px-3 py-2.5 font-medium">Member</th>
             <th scope="col" className="px-3 py-2.5 font-medium">Status</th>
             <th scope="col" className="px-3 py-2.5 font-medium">Plan</th>
             <th scope="col" className="px-3 py-2.5 font-medium">Due</th>
             <th scope="col" className="px-3 py-2.5 font-medium">Servers</th>
+            <th scope="col" className="w-10 px-2 py-2.5">
+              <span className="sr-only">Actions</span>
+            </th>
           </tr>
         </thead>
         <tbody className="divide-y">
           {items.map((m) => (
-            <tr key={m.id} className="cursor-pointer hover:bg-accent/40" onClick={() => navigate(`/members/${m.id}`)}>
+            <tr key={m.id} className={cn('cursor-pointer hover:bg-accent/40', selected.has(m.id) && 'bg-primary/5')} onClick={() => navigate(`/members/${m.id}`)}>
+              <td className="py-2.5 pl-3" onClick={(e) => e.stopPropagation()}>
+                <input type="checkbox" className="h-4 w-4 align-middle" aria-label={`Select ${m.displayName}`} checked={selected.has(m.id)} onChange={(e) => onToggle(m, e.target.checked)} />
+              </td>
               <td className="max-w-[18rem] px-3 py-2.5">
                 <Link to={`/members/${m.id}`} className="block truncate font-medium hover:underline" onClick={(e) => e.stopPropagation()}>
                   {m.displayName}
@@ -222,6 +273,9 @@ function MemberTable({ items }: { items: MemberSummary[] }) {
               <td className="px-3 py-2.5">
                 <ServerChips servers={m.servers} />
               </td>
+              <td className="px-2 py-1.5 text-right">
+                <QuickActions member={m} timeZone={timeZone} onResult={onResult} />
+              </td>
             </tr>
           ))}
         </tbody>
@@ -230,12 +284,13 @@ function MemberTable({ items }: { items: MemberSummary[] }) {
   );
 }
 
-function MemberCards({ items }: { items: MemberSummary[] }) {
+function MemberCards({ items, selected, onToggle, timeZone, onResult }: RowProps) {
   return (
     <ul className="space-y-2 md:hidden">
       {items.map((m) => (
-        <li key={m.id}>
-          <Link to={`/members/${m.id}`} className="block rounded-lg border bg-card p-3 hover:border-primary/50">
+        <li key={m.id} className="flex items-start gap-2">
+          <input type="checkbox" className="mt-4 h-4 w-4 shrink-0" aria-label={`Select ${m.displayName}`} checked={selected.has(m.id)} onChange={(e) => onToggle(m, e.target.checked)} />
+          <Link to={`/members/${m.id}`} className="block min-w-0 flex-1 rounded-lg border bg-card p-3 hover:border-primary/50">
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
                 <div className="truncate font-medium">{m.displayName}</div>
@@ -251,6 +306,9 @@ function MemberCards({ items }: { items: MemberSummary[] }) {
               </div>
             </div>
           </Link>
+          <div className="pt-2">
+            <QuickActions member={m} timeZone={timeZone} onResult={onResult} />
+          </div>
         </li>
       ))}
     </ul>

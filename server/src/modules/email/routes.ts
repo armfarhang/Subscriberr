@@ -4,9 +4,11 @@ import { zValidator } from '@hono/zod-validator';
 import { announcementDraftSchema, audienceSchema, sendAnnouncementSchema, emailListQuerySchema, emailSettingsSchema, packCreateSchema, packFileWriteSchema, previewSchema, TEMPLATE_KINDS, TEMPLATE_LIMITS, themeValuesSchema } from '@subscriberr/shared';
 import { z } from 'zod';
 import { AppError, badRequest, notFound } from '../../core/errors.js';
+import { writeAudit } from '../../core/audit.js';
 import { actorOf, workspaceOf } from '../../http/middleware.js';
 import type { AppDeps, AppEnv } from '../../http/types.js';
 import { jsonBody } from '../../http/validate.js';
+import { sendReminderNow } from './automated.js';
 import { drainWorkspace } from './drain.js';
 import { announcementRecipients, audienceRecipients, cancelAnnouncement, createAnnouncement, defaultFooter, deleteDraft, getAnnouncement, listAnnouncements, previewAnnouncement, sendAnnouncement, updateAnnouncement } from './announcements.js';
 import {
@@ -59,6 +61,16 @@ export function emailRoutes(deps: AppDeps) {
     return c.json({ ok: true });
   });
   /** "Send now": run the drainer for this workspace without waiting for the next minute. */
+  // Quick action: send one reminder to a member now (§13.1 #3).
+  app.post('/members/:id/remind', (c) => {
+    const ws = workspaceOf(c);
+    const id = idParam(c.req.param('id'));
+    const result = sendReminderNow(ws, { clock: deps.clock, packs: packEnvOf(deps) }, id);
+    if (result.reason === 'member not found') throw notFound('Member not found');
+    if (result.queued) writeAudit(ws, deps.clock, { actor: actorOf(c), action: 'email.reminder_requested', entity: 'member', entityId: id, details: {} });
+    return c.json(result);
+  });
+
   app.post('/drain', async (c) => {
     if (!deps.gmail) throw new AppError(503, 'gmail_unavailable', 'Sending is not available.');
     return c.json(await drainWorkspace(workspaceOf(c), { clock: deps.clock, log: deps.log, gmail: deps.gmail, throttleMs: deps.emailThrottleMs }));

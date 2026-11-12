@@ -119,3 +119,17 @@ export function alertOwnerOfIntegrityProblems(ctx: SystemContext, clock: Clock, 
     dedupeKey: `integrity:${day}`,
   });
 }
+
+/**
+ * "Send reminder" quick action (§13.1 #3): one reminder now, for a member with a due date.
+ * Same template and opt-outs as the automatic reminders; deduplicated per member, due date and
+ * day, so a double click queues it once.
+ */
+export function sendReminderNow(ws: WorkspaceContext, deps: { clock: Clock; packs: PackEnv }, memberId: number): { queued: boolean; reason?: string } {
+  const m = ws.sqlite.prepare('SELECT paid_through FROM members WHERE account_id = ? AND id = ?').get(ws.accountId, memberId) as { paid_through: string | null } | undefined;
+  if (!m) return { queued: false, reason: 'member not found' };
+  if (!m.paid_through) return { queued: false, reason: 'this member has no due date yet' };
+  const todayDate = today(deps.clock, getWorkspaceSettings(ws).timezone);
+  const days = diffDays(todayDate, m.paid_through);
+  return queueMemberEmail(ws, deps, 'reminder', memberId, `reminder:${memberId}:${m.paid_through}:manual-${todayDate}`, { days_until_due: Math.max(days, 0), due_date: longDate(m.paid_through) });
+}

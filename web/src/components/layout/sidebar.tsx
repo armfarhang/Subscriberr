@@ -1,8 +1,10 @@
 import type { Me } from '@subscriberr/shared';
+import { useQuery } from '@tanstack/react-query';
 import { ArrowLeftRight, LogOut } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { googleStartUrl } from '@/lib/api';
+import { api, googleStartUrl } from '@/lib/api';
+import { queryKeys } from '@/lib/query-keys';
 import { cn } from '@/lib/utils';
 import { NAV } from './nav';
 
@@ -38,6 +40,9 @@ function WorkspaceSwitcher({ me, canSwitch }: { me: Me; canSwitch: boolean }) {
 }
 
 export function Sidebar({ me, canSwitch, onNavigate, onSignOut }: { me: Me; canSwitch: boolean; onNavigate?: () => void; onSignOut: () => void }) {
+  // Review Queue badge (§7.5): shares the dashboard query, refreshed every minute.
+  const dash = useQuery({ queryKey: queryKeys.dashboard, queryFn: api.dashboard, refetchInterval: 60_000 });
+  const badges: Record<string, number> = { '/review-queue': dash.data?.reviewQueue ?? 0 };
   return (
     <div className="flex h-full flex-col gap-4 bg-sidebar p-4 text-sidebar-foreground">
       <Logo className="px-1 text-foreground" />
@@ -61,7 +66,12 @@ export function Sidebar({ me, canSwitch, onNavigate, onSignOut }: { me: Me; canS
                     }
                   >
                     <item.icon className="h-4 w-4 shrink-0" aria-hidden />
-                    {item.label}
+                    <span className="flex-1">{item.label}</span>
+                    {(badges[item.to] ?? 0) > 0 && (
+                      <span className="rounded-full bg-warning/20 px-1.5 text-xs font-semibold tabular-nums text-warning" aria-label={`${badges[item.to]} waiting`}>
+                        {badges[item.to]}
+                      </span>
+                    )}
                   </NavLink>
                 </li>
               ))}

@@ -1,0 +1,52 @@
+<?xml version="1.0"?>
+<!--
+  Unraid Docker template for Subscriberr (Spec §15, §18 M10).
+
+  Install: copy this file to /boot/config/plugins/dockerMan/templates-user/my-subscriberr.xml on the
+  Unraid flash drive, then Docker → Add Container → Template: "subscriberr".
+
+  The image is built locally (there is no public registry image): on the Unraid box, in a clone of
+  the repository, run `docker build -t subscriberr .` first. Repository below = that local tag.
+
+  Two volumes are REQUIRED and must be on DIFFERENT disks/shares: /data (appdata, usually the cache
+  SSD) and /backups (a share on the array or another disk). The System page warns if they share a
+  filesystem.
+-->
+<Container version="2">
+  <Name>subscriberr</Name>
+  <Repository>subscriberr:latest</Repository>
+  <Registry/>
+  <Network>npm_default</Network>
+  <MyIP/>
+  <Shell>sh</Shell>
+  <Privileged>false</Privileged>
+  <Support/>
+  <Project/>
+  <Overview>Tracks and enforces paid access to Plex and Jellyfin libraries for members who pay by Interac e-Transfer. Reads e-Transfer notices from Gmail, matches payments to members, extends due dates, grants/revokes library access and sends reminders. Put it behind Nginx Proxy Manager (Network: the NPM Docker network) and open it through its https:// address.</Overview>
+  <Category>Tools: MediaApp:Other</Category>
+  <WebUI>http://[IP]:[PORT:3000]/</WebUI>
+  <TemplateURL/>
+  <Icon/>
+  <ExtraParams>--restart=unless-stopped</ExtraParams>
+  <PostArgs/>
+  <CPUset/>
+  <DonateText/>
+  <DonateLink/>
+  <Requires>Build the image first: docker build -t subscriberr . (in a clone of the repository). Map /backups to a different disk than /data.</Requires>
+
+  <Config Name="WebUI port" Target="3000" Default="3000" Mode="tcp" Description="Container port 3000. Not needed when NPM reaches the container over the shared Docker network; publish it only for a LAN test (secure cookies need https, so sign in through the NPM address)." Type="Port" Display="always" Required="false" Mask="false"/>
+
+  <Config Name="Data (appdata)" Target="/data" Default="/mnt/user/appdata/subscriberr" Mode="rw" Description="Database, custom template packs, logos, import staging." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/subscriberr</Config>
+  <Config Name="Backups" Target="/backups" Default="/mnt/user/backups/subscriberr" Mode="rw" Description="Nightly verified backups. MUST be a different share/disk than appdata (not the same cache SSD). Include it in your off-box backup. Backups are not encrypted." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/backups/subscriberr</Config>
+
+  <Config Name="BASE_URL" Target="BASE_URL" Default="https://subscriberr.mediaservers.org" Mode="" Description="Public URL people type. Used for the Google OAuth redirect, secure cookies and email links." Type="Variable" Display="always" Required="true" Mask="false">https://subscriberr.mediaservers.org</Config>
+  <Config Name="TRUST_PROXY" Target="TRUST_PROXY" Default="true" Mode="" Description="true behind Nginx Proxy Manager (one hop). 2 if Cloudflare's proxy (orange cloud) is also in front of NPM." Type="Variable" Display="always" Required="true" Mask="false">true</Config>
+  <Config Name="APP_SECRET" Target="APP_SECRET" Default="" Mode="" Description="REQUIRED, at least 32 random characters. Encrypts stored Google and media-server credentials. Keep a copy in your password manager: backups do NOT include it." Type="Variable" Display="always" Required="true" Mask="true"/>
+  <Config Name="GOOGLE_CLIENT_ID" Target="GOOGLE_CLIENT_ID" Default="" Mode="" Description="Google OAuth client id (README: Google sign-in)." Type="Variable" Display="always" Required="true" Mask="false"/>
+  <Config Name="GOOGLE_CLIENT_SECRET" Target="GOOGLE_CLIENT_SECRET" Default="" Mode="" Description="Google OAuth client secret." Type="Variable" Display="always" Required="true" Mask="true"/>
+  <Config Name="ADMIN_EMAILS" Target="ADMIN_EMAILS" Default="" Mode="" Description="Recommended: your Gmail address. Only these accounts can become the Owner of a fresh install; comma-separated." Type="Variable" Display="always" Required="false" Mask="false"/>
+  <Config Name="TZ" Target="TZ" Default="America/Toronto" Mode="" Description="Server timezone (nightly backup time, default workspace timezone)." Type="Variable" Display="always" Required="false" Mask="false">America/Toronto</Config>
+  <Config Name="PUID" Target="PUID" Default="99" Mode="" Description="Owner of the files in /data and /backups (Unraid: 99 = nobody)." Type="Variable" Display="advanced" Required="false" Mask="false">99</Config>
+  <Config Name="PGID" Target="PGID" Default="100" Mode="" Description="Group of the files in /data and /backups (Unraid: 100 = users)." Type="Variable" Display="advanced" Required="false" Mask="false">100</Config>
+  <Config Name="LOG_LEVEL" Target="LOG_LEVEL" Default="info" Mode="" Description="debug | info | warn | error" Type="Variable" Display="advanced" Required="false" Mask="false">info</Config>
+</Container>

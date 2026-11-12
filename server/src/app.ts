@@ -15,6 +15,7 @@ import { allowlistRoutes } from './modules/auth/allowlist-routes.js';
 import { FakeGoogleAuthProvider, fakeGoogleRoutes } from './modules/auth/fake-google.js';
 import { authRoutes } from './modules/auth/routes.js';
 import { csvRoutes } from './modules/csv/routes.js';
+import { dashboardRoutes } from './modules/dashboard/routes.js';
 import { memberRoutes } from './modules/members/routes.js';
 import { mediaRoutes } from './modules/media/routes.js';
 import { paymentRoutes } from './modules/payments/routes.js';
@@ -101,6 +102,7 @@ export function createApp(deps: AppDeps) {
   app.use('/api/*', async (c, next) => (c.req.path === '/api/public-config' ? next() : requireAuth(c, next)));
   app.get('/api/me', (c) => c.json(toMe(c.get('account')!, getWorkspaceSettings(workspaceOf(c)).onboardingCompleted)));
   app.route('/api/workspace', workspaceRoutes(deps));
+  app.route('/api/dashboard', dashboardRoutes(deps));
   app.route('/api/members', memberRoutes(deps));
   app.route('/api/csv', csvRoutes(deps));
   app.route('/api/payments', paymentRoutes(deps));

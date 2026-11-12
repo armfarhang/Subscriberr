@@ -129,13 +129,13 @@ export function allowEmail(db: Sqlite, email: string, ownerId = 1): void {
 export const testSecretBox = () => createSecretBox(TEST_SECRET);
 
 /** The app wired like main.ts, with the in-process fake Google unless another provider is given. */
-export function testApp(world: TestWorld, options: { webDir?: string; google?: GoogleAuthProvider | null; config?: Config; gmail?: GmailClientFactory; onPaymentStored?: AppDeps['onPaymentStored']; media?: MediaProviderFactory } = {}) {
+export function testApp(world: TestWorld, options: { webDir?: string; google?: GoogleAuthProvider | null; config?: Config; gmail?: GmailClientFactory; onPaymentStored?: AppDeps['onPaymentStored']; media?: MediaProviderFactory; scheduler?: AppDeps['scheduler']; logBuffer?: AppDeps['logBuffer'] } = {}) {
   const config = options.config ?? world.config;
   const google = options.google === undefined ? new FakeGoogleAuthProvider(config.baseUrl, world.clock) : options.google;
   const secretBox = testSecretBox();
   const packs = { builtinDir: DEFAULT_BUILTIN_DIR, workspacesDir: world.workspacesDir };
   const media = options.media ?? createMediaProviderFactory(config, { credentialsFor: credentialsResolver(world.ctx, secretBox) });
   const services = createServices({ clock: world.clock, log: silentLogger, packs, ctx: world.ctx, media });
-  const app = createApp({ config, ctx: world.ctx, clock: world.clock, log: silentLogger, secretBox, google, backupEnv: world.backupEnv, webDir: options.webDir, media, gmail: options.gmail ?? createGmailClientFactory(config), onPaymentStored: options.onPaymentStored ?? services.onPaymentStored, billingEvents: services.billingEvents, packs, emailThrottleMs: 0 });
+  const app = createApp({ config, ctx: world.ctx, clock: world.clock, log: silentLogger, secretBox, google, backupEnv: world.backupEnv, webDir: options.webDir, media, gmail: options.gmail ?? createGmailClientFactory(config), onPaymentStored: options.onPaymentStored ?? services.onPaymentStored, billingEvents: services.billingEvents, packs, emailThrottleMs: 0, scheduler: options.scheduler, logBuffer: options.logBuffer });
   return { app, google, secretBox, config, services, media };
 }

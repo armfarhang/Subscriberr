@@ -1,7 +1,11 @@
 # Owner checklist
 
 Things that can only be verified with real accounts or on the real server. Everything else is
-covered by automated tests against demo mode. Items are added as milestones land.
+covered by automated tests (unit, integration and a Playwright e2e suite) against demo mode.
+
+**Suggested order:** M1 Docker/Unraid → M2 Google client + first sign-in → M3/M4 your members →
+M5 a real e-Transfer → M6 opening balances → M7 test emails → M9 one test member on each server
+→ M10 → the end-to-end "go-live" check at the bottom.
 
 ## After Milestone 1 (Foundation)
 
@@ -106,7 +110,7 @@ Needs real Google sign-in (Milestone 2 checklist) with `SEED_DEMO=false`.
       fixtures only include a 2017 layout. If it shows up in Review with "Unrecognized", send a
       redacted copy so the parser can learn it.
 
-## Later milestones (placeholders — detailed steps are added when each lands)
+## Milestones 6–9 (billing, emails, announcements, media servers)
 - [ ] **M6 (billing):** after a real e-Transfer is matched, the member's due date moves forward by the
       right number of periods (Member → Balance → History shows the entry). Pay a little early: the new
       period stacks on the old due date. Send less than the plan amount: nothing extends, it is held as
@@ -149,3 +153,28 @@ Needs real Google sign-in (Milestone 2 checklist) with `SEED_DEMO=false`.
 - [ ] **M9 Jellyfin:** after a revoke, the user's Policy shows "Enable access to all libraries" off and no
       library ticked. Optionally test "Also disable the user" and "Stop their streams" on the test account.
 - [ ] **M9:** your own admin/owner account never changes (it is never even offered for linking).
+
+## After Milestone 10 (Polish)
+- [ ] **Unraid template:** build the image on the box (`docker build -t subscriberr .`), copy
+      `deploy/unraid/subscriberr.xml` to `/boot/config/plugins/dockerMan/templates-user/my-subscriberr.xml`,
+      add the container from it. Check both paths, the masked `APP_SECRET` / client secret, and that
+      **Network** is the network your NPM container uses (template default `npm_default`).
+- [ ] **Dashboard** after a few days of real use: the counts match the Members filters, "Payments this
+      month" matches your bank for the month, and the Health card shows Gmail connected and a recent scan.
+- [ ] **System → Jobs:** after a night, *Nightly backup*, *Integrity + ledger check* and *Daily run* show
+      **OK** with a recent "last run". Try **Run now** on *Gmail scan*.
+- [ ] **System → Download** a backup once: read the privacy warning, save it somewhere private, open
+      the zip (it contains `subscriberr.db`, `workspaces/`, `manifest.json`), then delete that copy.
+- [ ] **Members list quick actions** on a test member: *Send reminder* (arrives in their inbox in your
+      template), *Extend…* (moves the paid-through date, shown in Balance → History), *Pause* / *Reactivate*.
+- [ ] Select two members (yourself and a test address) → **Announcement to selected** → send.
+
+## Go-live check (Spec §18 "Definition of done")
+- [ ] Behind NPM on Unraid, sign in with Google at your https address.
+- [ ] Add a member linked to a Plex or Jellyfin account, with a plan.
+- [ ] Send a real e-Transfer to the mailbox: within ~5 minutes it is detected, shown as verified,
+      matched, applied, the due date moves, library access is granted and the thank-you email arrives
+      in your customised template.
+- [ ] Send less than the plan amount: a deficit email arrives and nothing is extended.
+- [ ] Let a test member's grace period run out: their library access is removed the next day.
+- [ ] Export the members CSV, edit it, re-import it through the side-by-side review, then **Undo** it.

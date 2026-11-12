@@ -42,3 +42,38 @@ export function createLogger(
 
 /** Logger that discards everything (tests). */
 export const silentLogger: Logger = createLogger('error', () => {});
+
+/**
+ * Keeps the last `size` log lines in memory for the System page ("recent errors", "log tail").
+ * Lines are already structured JSON; nothing is written to disk.
+ */
+export interface LogBuffer {
+  /** Wraps a sink so every line is also kept here. */
+  tee(sink: LogSink): LogSink;
+  lines(opts?: { minLevel?: LogLevel; limit?: number }): Array<{ time: string; level: LogLevel; msg: string; fields: Record<string, unknown> }>;
+}
+
+export function createLogBuffer(size = 500): LogBuffer {
+  const ring: string[] = [];
+  return {
+    tee: (sink) => (line) => {
+      ring.push(line);
+      if (ring.length > size) ring.splice(0, ring.length - size);
+      sink(line);
+    },
+    lines: ({ minLevel = 'debug', limit = 200 } = {}) => {
+      const out: ReturnType<LogBuffer['lines']> = [];
+      for (let i = ring.length - 1; i >= 0 && out.length < limit; i--) {
+        try {
+          const { time, level, msg, ...fields } = JSON.parse(ring[i]!) as { time: string; level: LogLevel; msg: string } & Record<string, unknown>;
+          if (ORDER[level] >= ORDER[minLevel]) out.push({ time, level, msg, fields });
+        } catch {
+          // not one of ours
+        }
+      }
+      return out;
+    },
+  };
+}
+
+export const stdoutSink: LogSink = (line) => process.stdout.write(`${line}\n`);

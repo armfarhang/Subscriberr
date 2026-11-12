@@ -1,8 +1,9 @@
 import type { Me, PublicConfig } from '@subscriberr/shared';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { AlertTriangle, FlaskConical, Menu, X } from 'lucide-react';
+import { AlertTriangle, FlaskConical, Menu, Search, X } from 'lucide-react';
 import * as React from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
+import { CommandPalette, useCommandPaletteShortcut } from '@/components/command-palette';
 import { Button } from '@/components/ui/button';
 import { api, googleStartUrl } from '@/lib/api';
 import { queryKeys } from '@/lib/query-keys';
@@ -13,6 +14,8 @@ import { ThemeToggle } from './theme';
 /** App frame: fixed sidebar on desktop, slide-over drawer on phones, top bar with the page title. */
 export function Shell({ me, config }: { me: Me; config: PublicConfig }) {
   const [drawerOpen, setDrawerOpen] = React.useState(false);
+  const [paletteOpen, setPaletteOpen] = React.useState(false);
+  useCommandPaletteShortcut(setPaletteOpen);
   const location = useLocation();
   const queryClient = useQueryClient();
   const signOut = useMutation({
@@ -70,8 +73,13 @@ export function Shell({ me, config }: { me: Me; config: PublicConfig }) {
           <Logo className="lg:hidden" />
           <h1 className="hidden text-base font-semibold lg:block">{current?.label ?? 'Subscriberr'}</h1>
           <div className="ml-auto flex items-center gap-2">
+            <Button variant="outline" size="sm" className="h-8 gap-2 text-muted-foreground" onClick={() => setPaletteOpen(true)} aria-label="Find a member (Ctrl+K)">
+              <Search className="h-4 w-4" />
+              <span className="hidden sm:inline">Find member</span>
+              <kbd className="hidden rounded border bg-muted px-1 font-mono text-[10px] md:inline">Ctrl K</kbd>
+            </Button>
             {config.demoMode && (
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-warning/40 bg-warning/10 px-2.5 py-1 text-xs font-medium text-warning" title="Fake Gmail, fake Plex/Jellyfin and fake sign-in. No real service is contacted.">
+              <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-warning/40 bg-warning/10 px-2.5 py-1 text-xs font-medium text-warning" title="Fake Gmail, fake Plex/Jellyfin and fake sign-in. No real service is contacted.">
                 <FlaskConical className="h-3.5 w-3.5" aria-hidden /> Demo mode
               </span>
             )}
@@ -93,6 +101,7 @@ export function Shell({ me, config }: { me: Me; config: PublicConfig }) {
             )}
           </div>
         )}
+        <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
         <main id="main" className="mx-auto w-full max-w-6xl flex-1 p-4 sm:p-6">
           <Outlet />
         </main>

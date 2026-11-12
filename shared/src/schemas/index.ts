@@ -7,3 +7,4 @@ export * from './billing.js';
 export * from './email.js';
 export * from './announcements.js';
 export * from './media.js';
+export * from './dashboard.js';

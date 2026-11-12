@@ -69,7 +69,7 @@ export function App() {
     <Routes>
       <Route element={<Shell me={account} config={config.data} />}>
         <Route index element={<DashboardPage me={account} />} />
-        <Route path="members" element={<MembersPage />} />
+        <Route path="members" element={<MembersPage timeZone={account.timezone} />} />
         <Route path="members/new" element={<NewMemberPage />} />
         <Route path="members/:id" element={<MemberDetailPage />} />
         <Route path="payments" element={<PaymentsPage timeZone={account.timezone} />} />

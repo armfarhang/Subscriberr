@@ -41,6 +41,15 @@ export class Scheduler {
     return [...this.jobs.keys()];
   }
 
+  /** Registered jobs with their cron schedule (null = on demand only). */
+  list(): Array<{ name: string; schedule: string | null }> {
+    return [...this.jobs.values()].map((j) => ({ name: j.name, schedule: j.cron ?? null }));
+  }
+
+  has(name: string): boolean {
+    return this.jobs.has(name);
+  }
+
   /** Marks runs left in `running` by a previous process as failed, then starts the cron timers. */
   start(): void {
     this.ctx.sqlite

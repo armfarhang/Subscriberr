@@ -24,4 +24,7 @@ export const queryKeys = {
   systemStatus: ['system', 'status'] as const,
   backups: ['system', 'backups'] as const,
   backupRetention: ['system', 'backup-retention'] as const,
+  jobs: ['system', 'jobs'] as const,
+  logs: (level: string) => ['system', 'logs', level] as const,
+  dashboard: ['dashboard'] as const,
 };

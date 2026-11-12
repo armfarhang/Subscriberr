@@ -17,10 +17,12 @@
     "test": "npm run build -w shared && npm run test -w shared && npm run test -w server",
     "lint": "eslint .",
     "typecheck": "npm run build -w shared && npm run typecheck -w shared && npm run typecheck -w server && npm run typecheck -w web",
-    "start": "node server/dist/cli.js serve"
+    "start": "node server/dist/cli.js serve",
+    "e2e": "npm run build && playwright test -c e2e/playwright.config.ts"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.65.0",
     "eslint": "^10.14.0",
     "globals": "^17.14.0",
     "typescript": "^6.0.3",

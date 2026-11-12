@@ -5,7 +5,7 @@ import { toUtcIso } from '@subscriberr/shared';
 import { createApp } from './app.js';
 import { loadConfig, loadDotEnv } from './config.js';
 import { createSecretBox } from './core/crypto.js';
-import { createLogger } from './core/logger.js';
+import { createLogBuffer, createLogger, stdoutSink } from './core/logger.js';
 import { nowIso, systemClock } from './core/time.js';
 import { createSystemContext } from './core/workspace-context.js';
 import { bootDatabase } from './db/boot.js';
@@ -39,7 +39,8 @@ const WEB_DIR = fileURLToPath(new URL('../../web/dist', import.meta.url));
 export async function serve(): Promise<void> {
   const baseDir = loadDotEnv();
   const config = loadConfig(process.env, baseDir);
-  const log = createLogger(config.logLevel);
+  const logBuffer = createLogBuffer(500);
+  const log = createLogger(config.logLevel, logBuffer.tee(stdoutSink));
   const clock = systemClock;
 
   mkdirSync(config.workspacesDir, { recursive: true });
@@ -120,7 +121,7 @@ export async function serve(): Promise<void> {
   registerMediaJobs(scheduler, ctx, { clock, log, media }, config.timezone);
   scheduler.start();
 
-  const app = createApp({ config, ctx, clock, log, secretBox, google, backupEnv, scheduler, media, gmail, onPaymentStored, billingEvents: services.billingEvents, packs, webDir: WEB_DIR });
+  const app = createApp({ config, ctx, clock, log, secretBox, google, backupEnv, scheduler, media, gmail, onPaymentStored, billingEvents: services.billingEvents, packs, logBuffer, webDir: WEB_DIR });
   const server = serveHttp({ fetch: app.fetch, port: config.port, hostname: '0.0.0.0' }, (info) => {
     log.info(`${APP_NAME} ${APP_VERSION} listening`, { port: info.port, baseUrl: config.baseUrl, dataDir: config.dataDir, backupDir: config.backupDir });
   });

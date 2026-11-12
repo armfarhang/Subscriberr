@@ -1,7 +1,7 @@
-import { RescanCard } from './rescan-card';
 import type { BackupRun, Me } from '@subscriberr/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, DatabaseBackup, XCircle } from 'lucide-react';
+import { CheckCircle2, DatabaseBackup, Download, ShieldAlert, XCircle } from 'lucide-react';
+import * as React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,6 +9,8 @@ import { api } from '@/lib/api';
 import { formatAge, formatBytes, formatDateTime } from '@/lib/format';
 import { queryKeys } from '@/lib/query-keys';
 import { BackupSummary, BackupWarnings } from './backup-health';
+import { JobsCard, LogsCard } from './jobs-card';
+import { RescanCard } from './rescan-card';
 
 const KIND_LABEL: Record<BackupRun['kind'], string> = {
   nightly: 'Nightly',
@@ -17,7 +19,7 @@ const KIND_LABEL: Record<BackupRun['kind'], string> = {
   pre_import: 'Before import',
 };
 
-function BackupRow({ run, timeZone }: { run: BackupRun; timeZone: string }) {
+function BackupRow({ run, timeZone, onDownload }: { run: BackupRun; timeZone: string; onDownload: (run: BackupRun) => void }) {
   return (
     <tr className="border-t">
       <td className="whitespace-nowrap py-2 pr-4">
@@ -45,6 +47,13 @@ function BackupRow({ run, timeZone }: { run: BackupRun; timeZone: string }) {
       <td className="max-w-[18rem] truncate py-2 font-mono text-xs text-muted-foreground" title={run.error ?? run.file ?? ''}>
         {run.error ?? (run.prunedAt ? `pruned ${formatAge(run.prunedAt)}` : run.file)}
       </td>
+      <td className="py-2 pl-2 text-right">
+        {run.verified && run.file && !run.prunedAt && (
+          <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => onDownload(run)} aria-label={`Download backup ${run.file}`}>
+            <Download /> Download
+          </Button>
+        )}
+      </td>
     </tr>
   );
 }
@@ -54,6 +63,7 @@ export function SystemPage({ me }: { me: Me }) {
   const isOwner = me.role === 'owner';
   const status = useQuery({ queryKey: queryKeys.systemStatus, queryFn: api.systemStatus });
   const backups = useQuery({ queryKey: queryKeys.backups, queryFn: api.backups, enabled: isOwner });
+  const [toDownload, setToDownload] = React.useState<BackupRun | null>(null);
   const backupNow = useMutation({
     mutationFn: api.backupNow,
     onSettled: () => {
@@ -89,6 +99,28 @@ export function SystemPage({ me }: { me: Me }) {
             </p>
           )}
 
+          {toDownload && (
+            <div role="alertdialog" aria-labelledby="dl-title" className="space-y-2 rounded-md border border-warning/40 bg-warning/10 p-3 text-sm">
+              <div id="dl-title" className="flex items-center gap-2 font-medium">
+                <ShieldAlert className="h-4 w-4 text-warning" aria-hidden /> This file is not encrypted
+              </div>
+              <p>
+                It contains every workspace’s member names, emails, notes and payment history. Keep it somewhere private (not a shared folder or email), and delete
+                copies you no longer need. It does not contain APP_SECRET.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Button asChild size="sm">
+                  <a href={api.backupDownloadUrl(toDownload.id)} download={toDownload.file ?? undefined} onClick={() => setToDownload(null)}>
+                    <Download /> I understand, download {toDownload.file}
+                  </a>
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => setToDownload(null)}>
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          )}
+
           {isOwner ? (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
@@ -100,10 +132,11 @@ export function SystemPage({ me }: { me: Me }) {
                     <th className="pb-2 pr-4 font-medium">Size</th>
                     <th className="pb-2 pr-4 font-medium">Status</th>
                     <th className="pb-2 font-medium">File</th>
+                    <th className="pb-2" aria-label="Actions" />
                   </tr>
                 </thead>
                 <tbody>
-                  {backups.data?.items.map((run) => <BackupRow key={run.id} run={run} timeZone={me.timezone} />)}
+                  {backups.data?.items.map((run) => <BackupRow key={run.id} run={run} timeZone={me.timezone} onDownload={setToDownload} />)}
                 </tbody>
               </table>
               {backups.data?.items.length === 0 && <p className="py-6 text-center text-sm text-muted-foreground">No backups yet.</p>}
@@ -131,6 +164,9 @@ export function SystemPage({ me }: { me: Me }) {
       </Card>
 
       <RescanCard />
+
+      {isOwner && <JobsCard timeZone={me.timezone} />}
+      {isOwner && <LogsCard timeZone={me.timezone} />}
 
       {status.data && (
         <p className="text-xs text-muted-foreground">
