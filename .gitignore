@@ -13,3 +13,8 @@ playwright-report/
 test-results/
 *.log
 .DS_Store
+.claude/
+CLAUDE.md
+PATCH.md
+PROGRESS.md
+Spec.md
