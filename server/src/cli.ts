@@ -26,6 +26,11 @@ Usage: subscriberr [command]
   selfcheck             Verify that native/third-party dependencies load in this environment
 `;
 
+// Everything this process creates (database, WAL, lock file, template packs, import staging) holds
+// members' personal data or encrypted credentials: owner-only by default (files 0600, dirs 0700).
+// No-op on Windows.
+process.umask(0o077);
+
 const out = (line: string) => process.stdout.write(`${line}\n`);
 const fail = (line: string) => process.stderr.write(`${line}\n`);
 

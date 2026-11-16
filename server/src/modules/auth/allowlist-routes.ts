@@ -18,7 +18,7 @@ export function allowlistRoutes(deps: AppDeps) {
   });
 
   app.delete('/:email', (c) => {
-    const result = removeAllowedAccount(deps.ctx, deps.clock, deps.config, c.get('account')!, decodeURIComponent(c.req.param('email')));
+    const result = removeAllowedAccount(deps.ctx, deps.clock, deps.config, c.get('account')!, c.req.param('email'));
     return c.json({ ...result, items: listAllowedAccounts(deps.ctx, deps.config) });
   });
 

@@ -178,3 +178,13 @@ Needs real Google sign-in (Milestone 2 checklist) with `SEED_DEMO=false`.
 - [ ] Send less than the plan amount: a deficit email arrives and nothing is extended.
 - [ ] Let a test member's grace period run out: their library access is removed the next day.
 - [ ] Export the members CSV, edit it, re-import it through the side-by-side review, then **Undo** it.
+
+## Security hardening (see PATCH.md)
+- [ ] `APP_SECRET` is a generated random value, not the `.env.example` placeholder (the app now
+      refuses to start otherwise).
+- [ ] On Unraid, the container starts healthy with the template's new Extra Parameters
+      (`--cap-drop=ALL`, `--read-only`, `--security-opt=no-new-privileges:true` …) and writes to both shares.
+- [ ] On the host, `/mnt/user/appdata/subscriberr` and the backups share show mode `700`, and
+      `subscriberr.db` shows `600`.
+- [ ] Each media server still passes **Test connection** (redirects are no longer followed: use the
+      server's final `https://` address).

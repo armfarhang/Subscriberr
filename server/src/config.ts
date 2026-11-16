@@ -64,13 +64,23 @@ export function parseTrustProxy(value: string | undefined): number | null {
 
 const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]']);
 
-function isLocalhostUrl(url: string): boolean {
+export function isLocalhostUrl(url: string): boolean {
   try {
     const host = new URL(url).hostname;
     return LOCAL_HOSTS.has(host) || host.endsWith('.localhost');
   } catch {
     return false;
   }
+}
+
+/** Values copied from documentation; anyone who has read the repository knows them. */
+const PLACEHOLDER_SECRETS = /change-?me|changeme|your[-_ ]?secret|example|placeholder|replace[-_ ]?me/i;
+
+/** Why an APP_SECRET must not protect a real deployment, or null when it looks random enough. */
+export function weakSecretReason(secret: string): string | null {
+  if (PLACEHOLDER_SECRETS.test(secret)) return 'it is a placeholder value from the documentation';
+  if (new Set(secret).size < 12) return 'it has too little variety (fewer than 12 different characters)';
+  return null;
 }
 
 /**
@@ -99,6 +109,12 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env, baseDir: string
   }
   if (e.SEED_DEMO && !demoAllowed) {
     problems.push('SEED_DEMO is only allowed when BASE_URL is a localhost URL and NODE_ENV is not "production"');
+  }
+  // APP_SECRET encrypts the stored Google / media-server credentials and the OAuth state cookie.
+  // A guessable value makes that encryption worthless, so a real deployment refuses to start.
+  const weak = weakSecretReason(e.APP_SECRET);
+  if (weak && !demoAllowed) {
+    problems.push(`APP_SECRET is not safe to use: ${weak}. Generate one: node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"`);
   }
   if (!e.DEV_FAKE_LOGIN && (!e.GOOGLE_CLIENT_ID || !e.GOOGLE_CLIENT_SECRET)) {
     problems.push('GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET are required (unless DEV_FAKE_LOGIN is enabled for local demo mode)');

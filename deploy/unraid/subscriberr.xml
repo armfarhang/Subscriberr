@@ -27,14 +27,14 @@
   <WebUI>http://[IP]:[PORT:3000]/</WebUI>
   <TemplateURL/>
   <Icon/>
-  <ExtraParams>--restart=unless-stopped</ExtraParams>
+  <ExtraParams>--restart=unless-stopped --security-opt=no-new-privileges:true --cap-drop=ALL --cap-add=CHOWN --cap-add=FOWNER --cap-add=DAC_OVERRIDE --cap-add=SETUID --cap-add=SETGID --read-only --tmpfs /tmp:rw,noexec,nosuid,nodev,size=256m --pids-limit=256</ExtraParams>
   <PostArgs/>
   <CPUset/>
   <DonateText/>
   <DonateLink/>
   <Requires>Build the image first: docker build -t subscriberr . (in a clone of the repository). Map /backups to a different disk than /data.</Requires>
 
-  <Config Name="WebUI port" Target="3000" Default="3000" Mode="tcp" Description="Container port 3000. Not needed when NPM reaches the container over the shared Docker network; publish it only for a LAN test (secure cookies need https, so sign in through the NPM address)." Type="Port" Display="always" Required="false" Mask="false"/>
+  <Config Name="WebUI port" Target="3000" Default="3000" Mode="tcp" Description="Container port 3000. Leave EMPTY when NPM reaches the container over the shared Docker network (recommended: a published port bypasses NPM's TLS and lets clients spoof their IP address). Not needed when NPM reaches the container over the shared Docker network; publish it only for a LAN test (secure cookies need https, so sign in through the NPM address)." Type="Port" Display="always" Required="false" Mask="false"/>
 
   <Config Name="Data (appdata)" Target="/data" Default="/mnt/user/appdata/subscriberr" Mode="rw" Description="Database, custom template packs, logos, import staging." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/subscriberr</Config>
   <Config Name="Backups" Target="/backups" Default="/mnt/user/backups/subscriberr" Mode="rw" Description="Nightly verified backups. MUST be a different share/disk than appdata (not the same cache SSD). Include it in your off-box backup. Backups are not encrypted." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/backups/subscriberr</Config>

@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { checkIntegrity, openDatabase, type Sqlite } from './client.js';
 import { currentSchemaVersion, migrate, type MigrateResult, pendingMigrations } from './migrate.js';
@@ -57,6 +57,14 @@ export async function bootDatabase(options: BootOptions): Promise<BootResult> {
   }
 
   try {
+    // Older installs created these world-readable (0644); the data is personal, so close them.
+    for (const file of [options.dbFile, `${options.dbFile}-wal`, `${options.dbFile}-shm`]) {
+      try {
+        if (existsSync(file)) chmodSync(file, 0o600);
+      } catch {
+        /* not the owner / filesystem without modes: the entrypoint and umask still apply */
+      }
+    }
     const from = currentSchemaVersion(db);
     const pending = pendingMigrations(db, options.migrationsDir); // throws SchemaTooNewError
     if (from > 0 && pending.length > 0 && options.beforeMigrate) {

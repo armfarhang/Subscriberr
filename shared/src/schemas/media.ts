@@ -8,6 +8,8 @@ const httpUrl = z
   .trim()
   .url()
   .refine((u) => /^https?:\/\//i.test(u), 'Use an http:// or https:// address')
+  // Credentials belong in the token field, never in the address (they would be stored and shown in clear text).
+  .refine((u) => !/^https?:\/\/[^/?#]*@/i.test(u), 'Remove the user name / password from the address')
   .transform((u) => u.replace(/\/+$/, ''));
 
 export const serverOptionsSchema = z

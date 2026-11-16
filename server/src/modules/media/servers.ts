@@ -17,6 +17,7 @@ import { type Clock, nowIso } from '../../core/time.js';
 import type { SystemContext, WorkspaceContext } from '../../core/workspace-context.js';
 import type { MediaProviderFactory, ServerSecrets } from './factory.js';
 import { getMemberLink, setMemberLink } from './links.js';
+import { mediaUrlProblem } from './net-guard.js';
 import type { MediaServerProvider } from './provider.js';
 
 // Media servers of a workspace (Spec §6.3, §10): credentials encrypted and write-only, users and
@@ -101,8 +102,23 @@ export function getServerView(ws: WorkspaceContext, id: number): ServerView {
   return toView(ws, serverRow(ws, id));
 }
 
+/** Rejects addresses that are never a media server (SSRF hardening; loopback is judged per request). */
+function assertUsableAddress(baseUrl: string): void {
+  const problem = mediaUrlProblem(baseUrl, { allowLoopback: true });
+  if (problem) throw badRequest(`This address cannot be used: ${problem}.`);
+}
+
+const originOf = (url: string): string | null => {
+  try {
+    return new URL(url).origin;
+  } catch {
+    return null;
+  }
+};
+
 export function createServer(ws: WorkspaceContext, deps: MediaDeps, actor: string, input: CreateServer): ServerView {
   const s = createServerSchema.parse(input);
+  assertUsableAddress(s.baseUrl);
   if (ws.sqlite.prepare('SELECT 1 FROM media_servers WHERE account_id = ? AND name = ?').get(ws.accountId, s.name)) throw conflict(`A server named “${s.name}” already exists.`);
   const id = ws.sqlite.transaction(() => {
     const newId = Number(
@@ -119,6 +135,14 @@ export function createServer(ws: WorkspaceContext, deps: MediaDeps, actor: strin
 export function updateServer(ws: WorkspaceContext, deps: MediaDeps, actor: string, id: number, input: UpdateServer): ServerView {
   const u = updateServerSchema.parse(input);
   const r = serverRow(ws, id);
+  if (u.baseUrl !== undefined) {
+    assertUsableAddress(u.baseUrl);
+    // The stored token is write-only. Pointing the server at a different host without re-entering
+    // it would send that token to the new host — a way to exfiltrate a secret nobody can read.
+    if (u.token === undefined && r.credentials_enc && originOf(u.baseUrl) !== originOf(r.base_url)) {
+      throw badRequest('Re-enter the token / API key when changing the server address to a different host.');
+    }
+  }
   const sets: string[] = [];
   const args: unknown[] = [];
   const set = (col: string, v: unknown) => {

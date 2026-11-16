@@ -21,8 +21,14 @@ const FORBIDDEN: Array<[RegExp, string]> = [
   [/<\s*link\b/i, 'External stylesheets (<link>) are not allowed'],
   [/<\s*meta\b[^>]*http-equiv\s*=\s*["']?refresh/i, 'Meta refresh is not allowed'],
   [/@import\b/i, 'CSS @import is not allowed'],
-  [/\son[a-z]+\s*=/i, 'Event-handler attributes (onclick=…) are not allowed'],
-  [/javascript\s*:/i, 'javascript: URLs are not allowed'],
+  // Attributes can also follow "/" or a closing quote without whitespace: <img/onerror=…>, <a href="x"onclick=…>.
+  [/(?:^|[\s/"'])on[a-z]{3,}\s*=/i, 'Event-handler attributes (onclick=…) are not allowed'],
+  [/j\s*a\s*v\s*a\s*s\s*c\s*r\s*i\s*p\s*t\s*(?::|&colon;|&#0*58;?|&#x0*3a;?)/i, 'javascript: URLs are not allowed'],
+  [/vbscript\s*:/i, 'vbscript: URLs are not allowed'],
+  [/data\s*:\s*text\/html/i, 'data:text/html URLs are not allowed'],
+  // Character references before the ":" of a URL scheme hide it from the checks above (java&#115;cript:).
+  [/\b(?:href|src|action|background|formaction)\s*=\s*["']?[^"'>:]*&(?:#|tab;|newline;)[^"'>:]*(?::|&colon;)/i, 'Encoded characters in a link address are not allowed'],
+  [/<\s*base\b/i, '<base> is not allowed'],
   [/url\(\s*["']?\s*(https?:)?\/\//i, 'Remote resources in CSS (url(http…)) are not allowed'],
 ];
 

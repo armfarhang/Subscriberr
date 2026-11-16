@@ -1,9 +1,10 @@
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { Hono } from 'hono';
+import { bodyLimit } from 'hono/body-limit';
 import { secureHeaders } from 'hono/secure-headers';
 import { serveStatic } from '@hono/node-server/serve-static';
-import type { Health, PublicConfig } from '@subscriberr/shared';
+import { type Health, IMPORT_LIMITS, type PublicConfig, TEMPLATE_LIMITS } from '@subscriberr/shared';
 import { errorBody } from './core/errors.js';
 import { nowIso } from './core/time.js';
 import { currentSchemaVersion } from './db/migrate.js';
@@ -28,6 +29,12 @@ import { APP_NAME, APP_VERSION } from './version.js';
 
 /** Sign-in endpoints: 30 requests per client IP per 5 minutes (Spec §16). */
 export const AUTH_RATE_LIMIT = { windowMs: 5 * 60_000, max: 30 };
+
+/**
+ * Upper bound for any request body. The upload routes keep their own, tighter limits; this one
+ * stops a client from making the server buffer an arbitrarily large JSON/form body in memory.
+ */
+export const MAX_BODY_BYTES = 2 * Math.max(IMPORT_LIMITS.maxBytes, TEMPLATE_LIMITS.packBytes);
 
 /** Builds the Hono app: middleware → module routes → static web app. */
 export function createApp(deps: AppDeps) {
@@ -75,6 +82,11 @@ export function createApp(deps: AppDeps) {
     onLimited: (c) => (c.req.method === 'GET' ? c.redirect('/?auth_error=rate_limited', 302) : c.json(errorBody('rate_limited', 'Too many attempts. Try again in a few minutes.'), 429)),
   });
   app.use('/auth/*', authLimiter);
+
+  const sizeCap = bodyLimit({ maxSize: MAX_BODY_BYTES, onError: (c) => c.json(errorBody('too_large', 'The request is too large'), 413) });
+  app.use('/api/*', sizeCap);
+  app.use('/auth/*', sizeCap);
+  app.use('/dev/*', sizeCap);
 
   app.use('/api/*', csrfMiddleware(deps), sessionMiddleware(deps));
   app.use('/auth/*', csrfMiddleware(deps), sessionMiddleware(deps));

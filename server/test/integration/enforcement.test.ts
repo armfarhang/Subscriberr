@@ -59,6 +59,14 @@ describe('servers, users and links (Spec §10.1)', () => {
     expect(JSON.stringify(created)).not.toContain('secret-api-key-123');
     expect(String((world.db.prepare('SELECT credentials_enc FROM media_servers WHERE id = ?').get(created.id) as { credentials_enc: string }).credentials_enc)).toMatch(/^v1:/);
     await json('/api/media/servers', { method: 'POST', body: { type: 'plex', name: 'Real JF', baseUrl: 'https://x.example.com', token: 'another-token' } }, 409);
+
+    // SSRF hardening: metadata/link-local addresses and URLs with credentials are refused, and the
+    // write-only token never follows the server to a different host.
+    await json('/api/media/servers', { method: 'POST', body: { type: 'jellyfin', name: 'Meta', baseUrl: 'http://169.254.169.254', token: 'another-token' } }, 400);
+    await json('/api/media/servers', { method: 'POST', body: { type: 'jellyfin', name: 'Creds', baseUrl: 'http://admin:pw@jf.example.com', token: 'another-token' } }, 400);
+    await json(`/api/media/servers/${created.id}`, { method: 'PATCH', body: { baseUrl: 'https://attacker.example.net' } }, 400);
+    await json(`/api/media/servers/${created.id}`, { method: 'PATCH', body: { baseUrl: 'https://jf.example.com/jellyfin' } });
+    expect((await json<ServerView>(`/api/media/servers/${created.id}`, { method: 'PATCH', body: { baseUrl: 'https://jf2.example.com', token: 'new-api-key-456' } })).baseUrl).toBe('https://jf2.example.com');
   });
 });
 

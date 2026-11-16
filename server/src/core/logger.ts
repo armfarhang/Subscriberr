@@ -14,9 +14,25 @@ export interface Logger {
 
 export type LogSink = (line: string) => void;
 
-function serializeError(err: unknown): unknown {
-  if (err instanceof Error) return { name: err.name, message: err.message, stack: err.stack };
-  return err;
+const SECRET_KEY = /token|secret|password|passwd|authorization|cookie|api[-_]?key|credential/i;
+// Bearer tokens, Google OAuth tokens and Plex/Jellyfin tokens that end up inside error messages or URLs.
+const SECRET_VALUE = /(Bearer\s+)[A-Za-z0-9._~+/=-]{8,}|\b(ya29\.|1\/\/)[A-Za-z0-9._-]{10,}|((?:X-Plex-Token|X-Emby-Token|api_key|access_token|refresh_token|client_secret)["']?\s*[=:]\s*["']?)[^\s"'&,}]+/gi;
+
+const scrub = (text: string): string => text.replace(SECRET_VALUE, (_m, bearer?: string, google?: string, named?: string) => `${bearer ?? google ?? named ?? ''}[redacted]`);
+
+/**
+ * Logs go to stdout (docker logs) and to the System page, so secrets must never reach them:
+ * fields with secret-looking names are dropped and token-shaped substrings are masked.
+ */
+export function redact(value: unknown, depth = 0): unknown {
+  if (typeof value === 'string') return scrub(value);
+  if (value === null || typeof value !== 'object') return value;
+  if (depth > 6) return '[truncated]';
+  if (value instanceof Error) return { name: value.name, message: scrub(value.message), stack: value.stack ? scrub(value.stack) : undefined };
+  if (Array.isArray(value)) return value.map((v) => redact(v, depth + 1));
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(value)) out[k] = SECRET_KEY.test(k) && v !== null && v !== undefined && typeof v !== 'boolean' && typeof v !== 'number' ? '[redacted]' : redact(v, depth + 1);
+  return out;
 }
 
 export function createLogger(
@@ -27,8 +43,8 @@ export function createLogger(
   const min = ORDER[level];
   const emit = (lvl: LogLevel, msg: string, fields?: Record<string, unknown>) => {
     if (ORDER[lvl] < min) return;
-    const record: Record<string, unknown> = { time: new Date().toISOString(), level: lvl, msg, ...bindings };
-    for (const [k, v] of Object.entries(fields ?? {})) record[k] = k === 'err' ? serializeError(v) : v;
+    const record: Record<string, unknown> = { time: new Date().toISOString(), level: lvl, msg: scrub(msg), ...bindings };
+    for (const [k, v] of Object.entries((redact(fields ?? {}) as Record<string, unknown>) ?? {})) record[k] = v;
     sink(JSON.stringify(record));
   };
   return {

@@ -9,6 +9,28 @@ services:
     build: .
     container_name: subscriberr
     restart: unless-stopped
+    # --- Container hardening: a compromised app must not be able to reach the host. ---
+    # No privilege escalation through setuid binaries.
+    security_opt:
+      - no-new-privileges:true
+    # Drop every Linux capability, then add back only what the entrypoint needs to fix the
+    # ownership of the two volumes and switch to PUID:PGID. The app itself runs with none.
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - FOWNER
+      - DAC_OVERRIDE
+      - SETUID
+      - SETGID
+    # The image is immutable at runtime; only the two volumes and /tmp are writable.
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=256m
+    # Bounds for a runaway or abused process.
+    pids_limit: 256
+    mem_limit: 1g
+    # NEVER mount /var/run/docker.sock, use `privileged: true` or `network_mode: host` here.
     environment:
       BASE_URL: https://subscriberr.mediaservers.org
       TRUST_PROXY: "true"
@@ -29,9 +51,10 @@ services:
     networks:
       - npm
     # No published port: NPM reaches the container over the shared network.
-    # For a quick local test without NPM, uncomment:
+    # For a quick local test without NPM, uncomment (bound to this machine only — publishing it
+    # on all interfaces would bypass NPM's TLS and let clients spoof X-Forwarded-For):
     # ports:
-    #   - "3000:3000"
+    #   - "127.0.0.1:3000:3000"
 
 networks:
   npm:

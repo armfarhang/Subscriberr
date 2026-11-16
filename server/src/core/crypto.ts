@@ -24,7 +24,7 @@ export function createSecretBox(appSecret: string, keyId = 'k1'): SecretBox {
     keyId,
     encrypt(plaintext) {
       const iv = randomBytes(IV_BYTES);
-      const cipher = createCipheriv('aes-256-gcm', key, iv);
+      const cipher = createCipheriv('aes-256-gcm', key, iv, { authTagLength: TAG_BYTES });
       const ciphertext = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()]);
       const blob = Buffer.concat([iv, cipher.getAuthTag(), ciphertext]);
       return `${VERSION}:${keyId}:${blob.toString('base64')}`;
@@ -35,7 +35,8 @@ export function createSecretBox(appSecret: string, keyId = 'k1'): SecretBox {
       if (id !== keyId) throw new Error(`Ciphertext was encrypted with key "${id}", not "${keyId}"`);
       const blob = Buffer.from(b64, 'base64');
       if (blob.length < IV_BYTES + TAG_BYTES) throw new Error('Ciphertext is truncated');
-      const decipher = createDecipheriv('aes-256-gcm', key, blob.subarray(0, IV_BYTES));
+      // A fixed tag length means a truncated (weaker) authentication tag can never be accepted.
+      const decipher = createDecipheriv('aes-256-gcm', key, blob.subarray(0, IV_BYTES), { authTagLength: TAG_BYTES });
       decipher.setAuthTag(blob.subarray(IV_BYTES, IV_BYTES + TAG_BYTES));
       return Buffer.concat([decipher.update(blob.subarray(IV_BYTES + TAG_BYTES)), decipher.final()]).toString('utf8');
     },

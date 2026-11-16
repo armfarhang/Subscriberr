@@ -1,6 +1,7 @@
 import { timingSafeEqual } from 'node:crypto';
 import type { Context } from 'hono';
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
+import { isLocalhostUrl } from '../../config.js';
 import { randomToken, type SecretBox } from '../../core/crypto.js';
 import type { Clock } from '../../core/time.js';
 import { createPkcePair } from './google.js';
@@ -61,12 +62,17 @@ export function consumeOAuth(c: Context, box: SecretBox, clock: Clock, options: 
  * Vite dev server on another localhost port is allowed too. Anything else falls back to "/".
  */
 export function safeReturnTo(value: string | undefined, options: { baseUrl: string; isProduction: boolean }): string {
-  if (!value) return '/';
+  if (!value || value.length > 2000) return '/';
+  // Browsers strip tabs/newlines inside URLs ("/<tab>/evil.example" becomes "//evil.example"), so
+  // any control character disqualifies the value outright.
+  if ([...value].some((ch) => ch.charCodeAt(0) < 0x20 || ch.charCodeAt(0) === 0x7f)) return '/';
   if (value.startsWith('/') && !value.startsWith('//') && !value.includes('\\')) return value;
   try {
     const url = new URL(value);
     if (url.origin === new URL(options.baseUrl).origin) return url.pathname + url.search;
-    if (!options.isProduction && url.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(url.hostname)) return url.toString();
+    // The Vite dev server is only a valid destination while the app itself runs on localhost.
+    const localDev = !options.isProduction && isLocalhostUrl(options.baseUrl);
+    if (localDev && url.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(url.hostname)) return url.toString();
   } catch {
     /* not a URL */
   }

@@ -2,6 +2,7 @@ import type { Context, ErrorHandler, MiddlewareHandler } from 'hono';
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
 import { HTTPException } from 'hono/http-exception';
 import { getConnInfo } from '@hono/node-server/conninfo';
+import { isLocalhostUrl } from '../config.js';
 import { AppError, errorBody, forbidden, unauthorized } from '../core/errors.js';
 import { forWorkspace, type WorkspaceContext } from '../core/workspace-context.js';
 import { mayUseAccount } from '../modules/auth/allowlist.js';
@@ -105,7 +106,11 @@ export const CSRF_HEADER_VALUE = 'subscriberr';
  */
 export function csrfMiddleware(deps: AppDeps): MiddlewareHandler<AppEnv> {
   const allowedOrigin = new URL(deps.config.baseUrl).origin;
-  const isLocalDev = (origin: string) => !deps.config.isProduction && /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+  // The Vite dev server (another localhost port) is only trusted while the app itself runs on a
+  // localhost BASE_URL. A real deployment started without NODE_ENV=production must not accept
+  // requests from whatever happens to be listening on the visitor's own machine.
+  const devOrigins = !deps.config.isProduction && isLocalhostUrl(deps.config.baseUrl);
+  const isLocalDev = (origin: string) => devOrigins && /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
   return async (c, next) => {
     if (SAFE_METHODS.has(c.req.method)) return next();
     if (c.req.header(CSRF_HEADER) !== CSRF_HEADER_VALUE) throw forbidden('Missing CSRF header');
